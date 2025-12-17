@@ -42,6 +42,8 @@
                     // Trigger Logic based on View
                     if(viewId === 'view-log-activity') {
                         updateTimeField();
+                        // Hide any leftover dropdowns
+                        document.querySelectorAll('.custom-dropdown').forEach(el => el.classList.add('hidden'));
                     } else if (viewId === 'view-bin-locations') {
                         loadBinLocations();
                     } else if (viewId === 'view-contacts') {
@@ -127,7 +129,7 @@
         ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 </head>
-<body class="antialiased text-slate-900 dark:text-white">
+<body class="antialiased text-slate-900 dark:text-white" onclick="closeAllDropdowns(event)">
 
     <!-- TOAST COMPONENT (Hidden by default) -->
     <div id="toast-notification" class="fixed top-6 left-1/2 -translate-x-1/2 bg-surface-dark text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 min-w-[300px] border-l-4 border-transparent transition-all duration-300 transform scale-90 opacity-0 pointer-events-none">
@@ -197,7 +199,7 @@
             </div>
             
             <div class="mt-8 text-center">
-                <p class="text-xs font-bold text-slate-300 dark:text-slate-700">VERSION 1.0.16</p>
+                <p class="text-xs font-bold text-slate-300 dark:text-slate-700">VERSION 1.0.17</p>
             </div>
         </div>
     </section>
@@ -212,7 +214,7 @@
                 <h1 class="font-display font-bold text-2xl text-gray-900 dark:text-white">Log Activity</h1>
             </div>
 
-            <div class="flex-1 flex flex-col gap-4">
+            <div class="flex-1 flex flex-col gap-5">
                 
                 <!-- 1. Bin # -->
                 <div class="flex flex-col gap-2">
@@ -224,39 +226,51 @@
                     </div>
                 </div>
 
-                <!-- 2. Client Name -->
-                <div class="flex flex-col gap-2">
+                <!-- 2. Client Name (Custom Dropdown) -->
+                <div class="flex flex-col gap-2 relative z-30">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Client Name</label>
                     <div class="relative">
-                        <input type="text" id="log-client-name" list="client-suggestions" placeholder="Name..." 
+                        <input type="text" id="log-client-name" placeholder="Name..." autocomplete="off"
                                class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 shadow-sm"
-                               oninput="handleAutoFill(this, 'client_name')">
+                               oninput="handleAutoFill(this, 'client_name')" onfocus="handleAutoFill(this, 'client_name')">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">person</span>
-                        <datalist id="client-suggestions"></datalist>
+                        
+                        <!-- Dropdown Container -->
+                        <div id="suggestions-client-name" class="custom-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-surface-dark shadow-xl rounded-xl max-h-60 overflow-y-auto hidden border border-gray-100 dark:border-white/5">
+                            <!-- Items injected here -->
+                        </div>
                     </div>
                 </div>
 
-                <!-- 3. Address -->
-                <div class="flex flex-col gap-2">
+                <!-- 3. Address (Custom Dropdown) -->
+                <div class="flex flex-col gap-2 relative z-20">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Address</label>
                     <div class="relative">
-                        <input type="text" id="log-address" list="address-suggestions" placeholder="Enter address..." 
+                        <input type="text" id="log-address" placeholder="Enter address..." autocomplete="off"
                                class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 shadow-sm"
-                               oninput="handleAutoFill(this, 'address')">
+                               oninput="handleAutoFill(this, 'address')" onfocus="handleAutoFill(this, 'address')">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">location_on</span>
-                        <datalist id="address-suggestions"></datalist>
+                        
+                        <!-- Dropdown Container -->
+                        <div id="suggestions-address" class="custom-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-surface-dark shadow-xl rounded-xl max-h-60 overflow-y-auto hidden border border-gray-100 dark:border-white/5">
+                            <!-- Items injected here -->
+                        </div>
                     </div>
                 </div>
 
-                <!-- 4. Phone Number -->
-                <div class="flex flex-col gap-2">
+                <!-- 4. Phone Number (Custom Dropdown) -->
+                <div class="flex flex-col gap-2 relative z-10">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Phone Number</label>
                     <div class="relative">
-                        <input type="tel" id="log-phone" list="phone-suggestions" placeholder="(555) 000-0000" 
+                        <input type="tel" id="log-phone" placeholder="(555) 000-0000" autocomplete="off"
                                class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 shadow-sm"
-                               oninput="handleAutoFill(this, 'phone_number')">
+                               oninput="handleAutoFill(this, 'phone_number')" onfocus="handleAutoFill(this, 'phone_number')">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">phone</span>
-                        <datalist id="phone-suggestions"></datalist>
+                        
+                        <!-- Dropdown Container -->
+                        <div id="suggestions-phone-number" class="custom-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-surface-dark shadow-xl rounded-xl max-h-60 overflow-y-auto hidden border border-gray-100 dark:border-white/5">
+                            <!-- Items injected here -->
+                        </div>
                     </div>
                 </div>
 
@@ -271,13 +285,18 @@
                     </div>
                 </div>
 
-                <!-- 6. Activity Type -->
+                <!-- 6. Activity Type (Custom UI Wrapper) -->
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Activity Type</label>
-                    <select id="log-type" class="w-full h-14 pl-4 pr-10 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm appearance-none">
-                        <option value="Deliver">Deliver</option>
-                        <option value="PickUp">PickUp</option>
-                    </select>
+                    <div class="relative">
+                        <select id="log-type" class="w-full h-14 pl-4 pr-12 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm appearance-none cursor-pointer">
+                            <option value="Deliver">Deliver</option>
+                            <option value="PickUp">PickUp</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                            <span class="material-symbols-outlined text-2xl">expand_more</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="h-24"></div> <!-- Spacer -->
@@ -536,23 +555,43 @@
                 renderContacts(filtered);
             };
 
-
             // ------------------ LOGGING LOGIC ------------------
             const addressInput = document.getElementById('log-address');
             const binInput = document.getElementById('log-bin-id');
             const clientInput = document.getElementById('log-client-name');
             const phoneInput = document.getElementById('log-phone');
             
-            // List IDs
-            const suggestionsListAddress = document.getElementById('address-suggestions');
-            const suggestionsListClient = document.getElementById('client-suggestions');
-            const suggestionsListPhone = document.getElementById('phone-suggestions');
-
             let debounceTimer;
+
+            // Helper to hide dropdowns
+            window.closeAllDropdowns = function(e) {
+                // If we clicked inside an input or a dropdown item, do nothing
+                if (e.target.tagName === 'INPUT' || e.target.classList.contains('custom-dropdown-item')) return;
+                
+                // Hide all dropdowns
+                document.querySelectorAll('.custom-dropdown').forEach(el => el.classList.add('hidden'));
+            };
             
+            // New AutoFill Logic using visible divs
             window.handleAutoFill = async function(input, dbColumn) {
                 const val = input.value.trim();
-                if (val.length < 3) return;
+                
+                // Identify the specific dropdown for this input
+                const listId = `suggestions-${dbColumn.replace('_', '-')}`; // e.g. suggestions-client-name
+                const listEl = document.getElementById(listId);
+                
+                if(!listEl) return;
+
+                // Close other dropdowns
+                document.querySelectorAll('.custom-dropdown').forEach(el => {
+                    if(el.id !== listId) el.classList.add('hidden');
+                });
+
+                if (val.length < 1) {
+                    listEl.classList.add('hidden');
+                    return;
+                }
+                
                 if (!supabase) return;
 
                 clearTimeout(debounceTimer);
@@ -564,31 +603,48 @@
                             .ilike(dbColumn, `%${val}%`)
                             .limit(5);
 
-                        if (data && data.length > 0) {
-                            let targetList;
-                            if(dbColumn === 'address') targetList = suggestionsListAddress;
-                            else if(dbColumn === 'client_name') targetList = suggestionsListClient;
-                            else if(dbColumn === 'phone_number') targetList = suggestionsListPhone;
+                        listEl.innerHTML = '';
 
-                            if(targetList) {
-                                targetList.innerHTML = '';
-                                const uniqueValues = [...new Set(data.map(item => item[dbColumn]))];
+                        if (data && data.length > 0) {
+                            // Extract unique values for the dropdown list
+                            const uniqueValues = [...new Set(data.map(item => item[dbColumn]))];
+                            
+                            if(uniqueValues.length > 0) {
+                                listEl.classList.remove('hidden');
+                                
                                 uniqueValues.forEach(v => {
                                     if(v) {
-                                        const option = document.createElement('option');
-                                        option.value = v;
-                                        targetList.appendChild(option);
+                                        const div = document.createElement('div');
+                                        div.className = "custom-dropdown-item p-3 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer border-b border-gray-100 dark:border-white/5 last:border-none transition-colors text-sm font-medium text-gray-700 dark:text-gray-200";
+                                        div.innerText = v;
+                                        
+                                        // Click Event
+                                        div.onclick = (e) => {
+                                            e.stopPropagation(); // Prevent immediate closing
+                                            
+                                            // 1. Set Value of Clicked Input
+                                            input.value = v;
+                                            
+                                            // 2. Find full record associated with this value to fill others
+                                            const fullRecord = data.find(d => d[dbColumn] === v);
+                                            if(fullRecord) {
+                                                if(fullRecord.bin_id && !binInput.value) binInput.value = fullRecord.bin_id;
+                                                if(fullRecord.client_name && !clientInput.value) clientInput.value = fullRecord.client_name;
+                                                if(fullRecord.phone_number && !phoneInput.value) phoneInput.value = fullRecord.phone_number;
+                                                if(fullRecord.address && !addressInput.value) addressInput.value = fullRecord.address;
+                                            }
+                                            
+                                            // 3. Hide list
+                                            listEl.classList.add('hidden');
+                                        };
+                                        listEl.appendChild(div);
                                     }
                                 });
+                            } else {
+                                listEl.classList.add('hidden');
                             }
-
-                            const exactMatch = data.find(d => d[dbColumn]?.toLowerCase() === val.toLowerCase());
-                            if (exactMatch) {
-                                if(exactMatch.bin_id && !binInput.value) binInput.value = exactMatch.bin_id;
-                                if(exactMatch.client_name && !clientInput.value) clientInput.value = exactMatch.client_name;
-                                if(exactMatch.phone_number && !phoneInput.value) phoneInput.value = exactMatch.phone_number;
-                                if(exactMatch.address && !addressInput.value) addressInput.value = exactMatch.address;
-                            }
+                        } else {
+                            listEl.classList.add('hidden');
                         }
                     } catch (e) {
                         console.log("Auto-suggest error:", e);
