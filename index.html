@@ -20,14 +20,10 @@
     <!-- Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- CRITICAL: Global Error Handler to catch "Silent Failures" -->
     <script>
+        // Global Error Handler
         window.onerror = function(message, source, lineno, colno, error) {
             console.error("Global Error:", message);
-            // Only alert if it's a script error to avoid annoying users with minor warnings
-            if (message.includes("Script error") || message.includes("supabase")) {
-                alert("App Error: " + message + "\nCheck console for details.");
-            }
         };
 
         window.navigateTo = function(viewId) {
@@ -42,8 +38,14 @@
                 requestAnimationFrame(() => {
                     target.classList.add('active');
                     window.scrollTo(0, 0);
+                    
+                    // Trigger Logic based on View
                     if(viewId === 'view-log-activity') {
                         updateTimeField();
+                    } else if (viewId === 'view-bin-locations') {
+                        loadBinLocations();
+                    } else if (viewId === 'view-contacts') {
+                        loadContacts();
                     }
                 });
             }
@@ -60,6 +62,34 @@
             const el = document.getElementById('log-display-date');
             if(el) el.innerText = dateStr;
         }
+
+        // --- NEW TOAST NOTIFICATION SYSTEM ---
+        window.showToast = function(message, isError = false) {
+            const toast = document.getElementById('toast-notification');
+            const toastMsg = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.innerText = message;
+            
+            if (isError) {
+                toast.className = "fixed top-6 left-1/2 -translate-x-1/2 bg-surface-dark text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 min-w-[300px] border-l-4 border-red-500 transition-all duration-300 transform scale-100 opacity-100";
+                toastIcon.innerText = "error";
+                toastIcon.className = "material-symbols-outlined text-red-500";
+            } else {
+                toast.className = "fixed top-6 left-1/2 -translate-x-1/2 bg-surface-dark text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 min-w-[300px] border-l-4 border-green-500 transition-all duration-300 transform scale-100 opacity-100";
+                toastIcon.innerText = "check_circle";
+                toastIcon.className = "material-symbols-outlined text-green-500";
+            }
+
+            // Hide after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
+                setTimeout(() => {
+                     // Reset class to hidden state fully
+                     toast.className = "fixed top-6 left-1/2 -translate-x-1/2 bg-surface-dark text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 min-w-[300px] border-l-4 border-transparent transition-all duration-300 transform scale-90 opacity-0 pointer-events-none";
+                }, 300);
+            }, 3000);
+        };
     </script>
 
     <script id="tailwind-config">
@@ -98,6 +128,12 @@
     </style>
 </head>
 <body class="antialiased text-slate-900 dark:text-white">
+
+    <!-- TOAST COMPONENT (Hidden by default) -->
+    <div id="toast-notification" class="fixed top-6 left-1/2 -translate-x-1/2 bg-surface-dark text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 min-w-[300px] border-l-4 border-transparent transition-all duration-300 transform scale-90 opacity-0 pointer-events-none">
+        <span id="toast-icon" class="material-symbols-outlined">info</span>
+        <span id="toast-message" class="font-bold text-sm">Notification</span>
+    </div>
 
     <!-- ================= VIEW: MAIN MENU ================= -->
     <section id="view-main-menu" class="view active">
@@ -161,7 +197,7 @@
             </div>
             
             <div class="mt-8 text-center">
-                <p class="text-xs font-bold text-slate-300 dark:text-slate-700">VERSION 1.0.13</p>
+                <p class="text-xs font-bold text-slate-300 dark:text-slate-700">VERSION 1.0.15</p>
             </div>
         </div>
     </section>
@@ -250,10 +286,10 @@
             <!-- Sticky Submit Button -->
             <div class="fixed bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-background-light via-background-light to-transparent dark:from-background-dark dark:via-background-dark pointer-events-none">
                 <div class="max-w-md mx-auto pointer-events-auto">
-                    <!-- Added type="button" and debug logging -->
-                    <button type="button" onclick="window.submitLog()" class="w-full h-14 bg-primary hover:bg-red-600 text-white font-display font-bold text-lg rounded-xl shadow-lg shadow-red-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer">
-                        <span>SUBMIT LOG</span>
-                        <span class="material-symbols-outlined">send</span>
+                    <!-- Added ID for text manipulation -->
+                    <button id="submit-btn" type="button" onclick="window.submitLog()" class="w-full h-14 bg-primary hover:bg-red-600 text-white font-display font-bold text-lg rounded-xl shadow-lg shadow-red-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:scale-100">
+                        <span id="submit-btn-text">SUBMIT LOG</span>
+                        <span id="submit-btn-icon" class="material-symbols-outlined">send</span>
                     </button>
                 </div>
             </div>
@@ -270,45 +306,9 @@
                 <h1 class="font-display font-bold text-2xl text-gray-900 dark:text-white">Bin Locations</h1>
             </div>
 
-            <div class="flex flex-col gap-4">
-                <!-- Bin Card 1 -->
-                <article class="flex flex-col bg-surface-light dark:bg-surface-dark p-3.5 rounded-lg shadow-sm border-l-[6px] border-status-pickup">
-                    <div class="flex items-start gap-3">
-                        <div class="h-14 w-14 shrink-0 rounded-md bg-primary-yellow text-black flex flex-col items-center justify-center font-bold border border-yellow-500 shadow-sm">
-                            <span class="text-[10px] leading-none uppercase tracking-wider opacity-80">Bin</span>
-                            <span class="text-xl leading-none">914</span>
-                        </div>
-                        <div class="flex-1 flex flex-col gap-0.5">
-                            <div class="flex justify-between items-start">
-                                <h4 class="text-xl font-black text-text-main dark:text-white leading-tight">Bin #914</h4>
-                                <span class="bg-status-pickup/10 text-status-pickup text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide border border-status-pickup/20">Active</span>
-                            </div>
-                            <div class="flex items-center gap-1.5 text-text-main dark:text-gray-200 cursor-pointer" onclick="openMaps('102 Cyber Lane')">
-                                <span class="material-symbols-outlined text-gray-500 text-[18px]">location_on</span>
-                                <span class="text-sm font-medium leading-tight text-gray-600 dark:text-gray-400 hover:text-primary underline decoration-dotted">102 Cyber Lane</span>
-                            </div>
-                        </div>
-                    </div>
-                </article>
-
-                <!-- Bin Card 2 -->
-                <article class="flex flex-col bg-surface-light dark:bg-surface-dark p-3.5 rounded-lg shadow-sm border-l-[6px] border-status-not-assigned">
-                    <div class="flex items-start gap-3">
-                        <div class="h-14 w-14 shrink-0 rounded-md bg-gray-100 dark:bg-gray-800 text-status-not-assigned flex flex-col items-center justify-center border border-gray-200 dark:border-gray-700">
-                            <span class="material-symbols-outlined text-[32px] icon-filled">no_transfer</span>
-                        </div>
-                        <div class="flex-1 flex flex-col gap-0.5">
-                            <div class="flex justify-between items-start">
-                                <h4 class="text-xl font-black text-text-main dark:text-white leading-tight">Bin #915</h4>
-                                <span class="bg-gray-100 text-gray-700 text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide border border-gray-200">Not assigned</span>
-                            </div>
-                            <div class="flex items-center gap-1.5 text-text-main dark:text-gray-200">
-                                <span class="material-symbols-outlined text-gray-500 text-[18px]">person</span>
-                                <span class="text-sm font-medium leading-tight text-gray-600 dark:text-gray-400">Available</span>
-                            </div>
-                        </div>
-                    </div>
-                </article>
+            <!-- Dynamic List Container -->
+            <div id="bin-list-container" class="flex flex-col gap-4">
+                <p class="text-center text-gray-500 animate-pulse mt-10">Loading locations...</p>
             </div>
         </main>
     </section>
@@ -323,36 +323,9 @@
                 <h1 class="font-display font-bold text-2xl text-gray-900 dark:text-white">Contact List</h1>
             </div>
 
-            <!-- Contact Card 1 -->
-            <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm mb-4 border border-gray-100 dark:border-white/5">
-                <div class="flex items-start gap-4">
-                    <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0">
-                        JD
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-white leading-none mb-1">John Doe</h3>
-                        <div class="flex flex-col gap-1">
-                            <div class="flex items-center gap-2 text-gray-700 dark:text-gray-300 cursor-pointer" onclick="openMaps('303 Cedar Lane')">
-                                <span class="material-symbols-outlined text-[18px] text-primary shrink-0">location_on</span>
-                                <p class="text-base font-medium leading-normal truncate hover:text-primary underline decoration-dotted">303 Cedar Lane</p>
-                            </div>
-                            <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                                <span class="material-symbols-outlined text-[18px] text-gray-400 shrink-0">phone</span>
-                                <p class="text-sm font-medium leading-normal truncate">(555) 369-1472</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-gray-100 dark:border-white/5">
-                    <button class="flex items-center justify-center gap-2 h-10 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold text-base active:bg-green-200">
-                        <span class="material-symbols-outlined text-xl">call</span>
-                        <span>Call</span>
-                    </button>
-                    <button onclick="openMaps('303 Cedar Lane')" class="flex items-center justify-center gap-2 h-10 rounded-md bg-primary/10 text-primary font-bold text-base active:bg-primary/20">
-                        <span class="material-symbols-outlined text-xl">directions</span>
-                        <span>Directions</span>
-                    </button>
-                </div>
+            <!-- Dynamic List Container -->
+            <div id="contact-list-container" class="flex flex-col">
+                 <p class="text-center text-gray-500 animate-pulse mt-10">Loading contacts...</p>
             </div>
         </main>
     </section>
@@ -371,10 +344,159 @@
                 console.log("Supabase Client Initialized");
             } else {
                 console.error("Supabase library NOT loaded.");
-                alert("Critical Error: Database library failed to load.\nCheck your internet connection.");
+                window.showToast("Connection Error: Database library failed to load", true);
             }
 
-            // ------------------ DATA LOGIC ------------------
+            // ------------------ DYNAMIC LOADING FUNCTIONS ------------------
+
+            // Load Bin Locations from Activity Logs
+            window.loadBinLocations = async function() {
+                if(!supabase) return;
+                const container = document.getElementById('bin-list-container');
+                
+                try {
+                    // Fetch all logs ordered by newest first
+                    const { data, error } = await supabase
+                        .from('activity_logs')
+                        .select('bin_id, address, activity_type, created_at')
+                        .order('created_at', { ascending: false });
+
+                    if(error) throw error;
+
+                    if(!data || data.length === 0) {
+                        container.innerHTML = `<p class="text-center text-gray-500 mt-10">No bin activity logged yet.</p>`;
+                        return;
+                    }
+
+                    // Filter to get unique Bins (most recent entry per bin)
+                    const uniqueBins = new Map();
+                    data.forEach(log => {
+                        if(log.bin_id && !uniqueBins.has(log.bin_id)) {
+                            uniqueBins.set(log.bin_id, log);
+                        }
+                    });
+
+                    container.innerHTML = ''; // Clear loading/old data
+
+                    if(uniqueBins.size === 0) {
+                        container.innerHTML = `<p class="text-center text-gray-500 mt-10">No bins found in logs.</p>`;
+                        return;
+                    }
+
+                    uniqueBins.forEach(bin => {
+                        // Determine status styling
+                        const isPickup = bin.activity_type === 'PickUp';
+                        const statusColor = isPickup ? 'border-status-not-assigned' : 'border-status-pickup';
+                        const statusBg = isPickup ? 'bg-gray-100 text-gray-700' : 'bg-status-pickup/10 text-status-pickup';
+                        const statusText = isPickup ? 'Picked Up' : 'Active';
+
+                        const html = `
+                        <article class="flex flex-col bg-surface-light dark:bg-surface-dark p-3.5 rounded-lg shadow-sm border-l-[6px] ${statusColor}">
+                            <div class="flex items-start gap-3">
+                                <div class="h-14 w-14 shrink-0 rounded-md bg-primary-yellow text-black flex flex-col items-center justify-center font-bold border border-yellow-500 shadow-sm">
+                                    <span class="text-[10px] leading-none uppercase tracking-wider opacity-80">Bin</span>
+                                    <span class="text-xl leading-none">${bin.bin_id}</span>
+                                </div>
+                                <div class="flex-1 flex flex-col gap-0.5">
+                                    <div class="flex justify-between items-start">
+                                        <h4 class="text-xl font-black text-text-main dark:text-white leading-tight">Bin #${bin.bin_id}</h4>
+                                        <span class="${statusBg} text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide border border-black/5">${bin.activity_type || 'Unknown'}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 text-text-main dark:text-gray-200 cursor-pointer" onclick="openMaps('${bin.address}')">
+                                        <span class="material-symbols-outlined text-gray-500 text-[18px]">location_on</span>
+                                        <span class="text-sm font-medium leading-tight text-gray-600 dark:text-gray-400 hover:text-primary underline decoration-dotted">${bin.address}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>`;
+                        container.innerHTML += html;
+                    });
+
+                } catch(e) {
+                    console.error("Bin Load Error:", e);
+                    container.innerHTML = `<p class="text-center text-red-500 mt-10">Error loading bins.</p>`;
+                }
+            };
+
+            // Load Contacts from Activity Logs
+            window.loadContacts = async function() {
+                if(!supabase) return;
+                const container = document.getElementById('contact-list-container');
+                
+                try {
+                    const { data, error } = await supabase
+                        .from('activity_logs')
+                        .select('client_name, address, phone_number, created_at')
+                        .order('created_at', { ascending: false });
+
+                    if(error) throw error;
+
+                    if(!data || data.length === 0) {
+                        container.innerHTML = `<p class="text-center text-gray-500 mt-10">No contacts logged yet.</p>`;
+                        return;
+                    }
+
+                    // Filter unique clients
+                    const uniqueClients = new Map();
+                    data.forEach(log => {
+                        if(log.client_name && !uniqueClients.has(log.client_name)) {
+                            uniqueClients.set(log.client_name, log);
+                        }
+                    });
+
+                    container.innerHTML = ''; 
+
+                    if(uniqueClients.size === 0) {
+                         container.innerHTML = `<p class="text-center text-gray-500 mt-10">No client names found in logs.</p>`;
+                         return;
+                    }
+
+                    uniqueClients.forEach(client => {
+                        const initials = client.client_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+                        const phone = client.phone_number || 'No Phone';
+
+                        const html = `
+                        <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm mb-4 border border-gray-100 dark:border-white/5">
+                            <div class="flex items-start gap-4">
+                                <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0">
+                                    ${initials}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="text-lg font-bold text-gray-900 dark:text-white leading-none mb-1">${client.client_name}</h3>
+                                    <div class="flex flex-col gap-1">
+                                        <div class="flex items-center gap-2 text-gray-700 dark:text-gray-300 cursor-pointer" onclick="openMaps('${client.address}')">
+                                            <span class="material-symbols-outlined text-[18px] text-primary shrink-0">location_on</span>
+                                            <p class="text-base font-medium leading-normal truncate hover:text-primary underline decoration-dotted">${client.address}</p>
+                                        </div>
+                                        <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                            <span class="material-symbols-outlined text-[18px] text-gray-400 shrink-0">phone</span>
+                                            <p class="text-sm font-medium leading-normal truncate">${phone}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-gray-100 dark:border-white/5">
+                                <a href="tel:${phone}" class="flex items-center justify-center gap-2 h-10 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold text-base active:bg-green-200">
+                                    <span class="material-symbols-outlined text-xl">call</span>
+                                    <span>Call</span>
+                                </a>
+                                <button onclick="openMaps('${client.address}')" class="flex items-center justify-center gap-2 h-10 rounded-md bg-primary/10 text-primary font-bold text-base active:bg-primary/20">
+                                    <span class="material-symbols-outlined text-xl">directions</span>
+                                    <span>Directions</span>
+                                </button>
+                            </div>
+                        </div>`;
+                        container.innerHTML += html;
+                    });
+
+                } catch(e) {
+                    console.error("Contacts Load Error:", e);
+                    container.innerHTML = `<p class="text-center text-red-500 mt-10">Error loading contacts.</p>`;
+                }
+            };
+
+
+            // ------------------ LOGGING LOGIC ------------------
             const addressInput = document.getElementById('log-address');
             const binInput = document.getElementById('log-bin-id');
             const clientInput = document.getElementById('log-client-name');
@@ -434,8 +556,19 @@
             };
 
             window.submitLog = async function() {
-                // LOUD DEBUGGING
-                alert("Processing... (Button Clicked)");
+                const btn = document.getElementById('submit-btn');
+                const btnText = document.getElementById('submit-btn-text');
+                const btnIcon = document.getElementById('submit-btn-icon');
+                
+                // Store original state
+                const originalText = "SUBMIT LOG";
+                const originalIcon = "send";
+
+                // Visual Feedback: Loading State
+                btn.disabled = true;
+                btnText.innerText = "Processing...";
+                btnIcon.innerText = "progress_activity";
+                btnIcon.classList.add("animate-spin");
                 
                 const address = addressInput.value;
                 const binId = binInput.value;
@@ -444,12 +577,22 @@
                 const type = document.getElementById('log-type').value;
 
                 if (!address) {
-                    alert("Please enter an address");
+                    window.showToast("Please enter an address", true);
+                    // Reset Button
+                    btn.disabled = false;
+                    btnText.innerText = originalText;
+                    btnIcon.innerText = originalIcon;
+                    btnIcon.classList.remove("animate-spin");
                     return;
                 }
 
                 if (!supabase) {
-                    alert("Database not initialized. Reload page.");
+                    window.showToast("Database error. Reload page.", true);
+                    // Reset Button
+                    btn.disabled = false;
+                    btnText.innerText = originalText;
+                    btnIcon.innerText = originalIcon;
+                    btnIcon.classList.remove("animate-spin");
                     return;
                 }
 
@@ -465,18 +608,34 @@
                     }]);
 
                 if (error) {
-                    alert('Supabase Error: ' + error.message);
+                    window.showToast(error.message, true);
+                    // Reset Button
+                    btn.disabled = false;
+                    btnText.innerText = originalText;
+                    btnIcon.innerText = originalIcon;
+                    btnIcon.classList.remove("animate-spin");
                 } else {
-                    alert('Activity Logged Successfully!');
-                    addressInput.value = '';
-                    binInput.value = '';
-                    clientInput.value = '';
-                    phoneInput.value = '';
-                    window.navigateTo('view-main-menu');
+                    window.showToast('Activity Logged Successfully!');
+                    
+                    // Delay navigation slightly so user sees the message
+                    setTimeout(() => {
+                        addressInput.value = '';
+                        binInput.value = '';
+                        clientInput.value = '';
+                        phoneInput.value = '';
+                        
+                        // Reset Button
+                        btn.disabled = false;
+                        btnText.innerText = originalText;
+                        btnIcon.innerText = originalIcon;
+                        btnIcon.classList.remove("animate-spin");
+                        
+                        window.navigateTo('view-main-menu');
+                    }, 1500);
                 }
             };
         } catch (globalErr) {
-            alert("Script Error: " + globalErr.message);
+            console.error(globalErr);
         }
 
         // ------------------ SERVICE WORKER ------------------
