@@ -63,7 +63,7 @@
             if(el) el.innerText = dateStr;
         }
 
-        // --- NEW TOAST NOTIFICATION SYSTEM ---
+        // --- TOAST NOTIFICATION SYSTEM ---
         window.showToast = function(message, isError = false) {
             const toast = document.getElementById('toast-notification');
             const toastMsg = document.getElementById('toast-message');
@@ -197,7 +197,7 @@
             </div>
             
             <div class="mt-8 text-center">
-                <p class="text-xs font-bold text-slate-300 dark:text-slate-700">VERSION 1.0.15</p>
+                <p class="text-xs font-bold text-slate-300 dark:text-slate-700">VERSION 1.0.16</p>
             </div>
         </div>
     </section>
@@ -316,15 +316,25 @@
     <!-- ================= VIEW: CONTACTS ================= -->
     <section id="view-contacts" class="view">
         <main class="flex flex-col min-h-screen p-4 max-w-md mx-auto bg-background-light dark:bg-background-dark">
-             <div class="flex items-center gap-4 mb-6">
+             <div class="flex items-center gap-4 mb-4">
                 <button onclick="navigateTo('view-main-menu')" class="p-2 -ml-2 rounded-full hover:bg-black/5 active:bg-black/10 transition-colors cursor-pointer">
                     <span class="material-symbols-outlined text-3xl text-gray-800 dark:text-white">arrow_back</span>
                 </button>
                 <h1 class="font-display font-bold text-2xl text-gray-900 dark:text-white">Contact List</h1>
             </div>
 
+            <!-- Search Bar -->
+            <div class="mb-6">
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+                    <input type="text" id="contact-search" placeholder="Search contacts..." 
+                           class="w-full h-12 pl-12 pr-4 rounded-xl bg-white dark:bg-surface-dark border-none shadow-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary"
+                           oninput="filterContacts()">
+                </div>
+            </div>
+
             <!-- Dynamic List Container -->
-            <div id="contact-list-container" class="flex flex-col">
+            <div id="contact-list-container" class="flex flex-col pb-20">
                  <p class="text-center text-gray-500 animate-pulse mt-10">Loading contacts...</p>
             </div>
         </main>
@@ -346,6 +356,9 @@
                 console.error("Supabase library NOT loaded.");
                 window.showToast("Connection Error: Database library failed to load", true);
             }
+
+            // Global store for filtering
+            window.allContacts = [];
 
             // ------------------ DYNAMIC LOADING FUNCTIONS ------------------
 
@@ -418,11 +431,16 @@
                 }
             };
 
-            // Load Contacts from Activity Logs
+            // Load Contacts from Activity Logs (Alphabetical)
             window.loadContacts = async function() {
                 if(!supabase) return;
                 const container = document.getElementById('contact-list-container');
+                // Reset search bar
+                const searchInput = document.getElementById('contact-search');
+                if(searchInput) searchInput.value = '';
                 
+                container.innerHTML = `<p class="text-center text-gray-500 animate-pulse mt-10">Loading contacts...</p>`;
+
                 try {
                     const { data, error } = await supabase
                         .from('activity_logs')
@@ -433,10 +451,11 @@
 
                     if(!data || data.length === 0) {
                         container.innerHTML = `<p class="text-center text-gray-500 mt-10">No contacts logged yet.</p>`;
+                        window.allContacts = [];
                         return;
                     }
 
-                    // Filter unique clients
+                    // Filter unique clients (latest info)
                     const uniqueClients = new Map();
                     data.forEach(log => {
                         if(log.client_name && !uniqueClients.has(log.client_name)) {
@@ -444,55 +463,77 @@
                         }
                     });
 
-                    container.innerHTML = ''; 
+                    // Store global copy for filtering and Sort Alphabetically
+                    window.allContacts = Array.from(uniqueClients.values()).sort((a, b) => 
+                        a.client_name.localeCompare(b.client_name)
+                    );
 
-                    if(uniqueClients.size === 0) {
-                         container.innerHTML = `<p class="text-center text-gray-500 mt-10">No client names found in logs.</p>`;
-                         return;
-                    }
-
-                    uniqueClients.forEach(client => {
-                        const initials = client.client_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
-                        const phone = client.phone_number || 'No Phone';
-
-                        const html = `
-                        <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm mb-4 border border-gray-100 dark:border-white/5">
-                            <div class="flex items-start gap-4">
-                                <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0">
-                                    ${initials}
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <h3 class="text-lg font-bold text-gray-900 dark:text-white leading-none mb-1">${client.client_name}</h3>
-                                    <div class="flex flex-col gap-1">
-                                        <div class="flex items-center gap-2 text-gray-700 dark:text-gray-300 cursor-pointer" onclick="openMaps('${client.address}')">
-                                            <span class="material-symbols-outlined text-[18px] text-primary shrink-0">location_on</span>
-                                            <p class="text-base font-medium leading-normal truncate hover:text-primary underline decoration-dotted">${client.address}</p>
-                                        </div>
-                                        <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                                            <span class="material-symbols-outlined text-[18px] text-gray-400 shrink-0">phone</span>
-                                            <p class="text-sm font-medium leading-normal truncate">${phone}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-gray-100 dark:border-white/5">
-                                <a href="tel:${phone}" class="flex items-center justify-center gap-2 h-10 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold text-base active:bg-green-200">
-                                    <span class="material-symbols-outlined text-xl">call</span>
-                                    <span>Call</span>
-                                </a>
-                                <button onclick="openMaps('${client.address}')" class="flex items-center justify-center gap-2 h-10 rounded-md bg-primary/10 text-primary font-bold text-base active:bg-primary/20">
-                                    <span class="material-symbols-outlined text-xl">directions</span>
-                                    <span>Directions</span>
-                                </button>
-                            </div>
-                        </div>`;
-                        container.innerHTML += html;
-                    });
+                    renderContacts(window.allContacts);
 
                 } catch(e) {
                     console.error("Contacts Load Error:", e);
                     container.innerHTML = `<p class="text-center text-red-500 mt-10">Error loading contacts.</p>`;
                 }
+            };
+
+            // Helper to render filtered contacts
+            window.renderContacts = function(contacts) {
+                const container = document.getElementById('contact-list-container');
+                container.innerHTML = ''; 
+
+                if(!contacts || contacts.length === 0) {
+                     container.innerHTML = `<p class="text-center text-gray-500 mt-10">No contacts found.</p>`;
+                     return;
+                }
+
+                contacts.forEach(client => {
+                    const initials = client.client_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+                    const phone = client.phone_number || 'No Phone';
+
+                    const html = `
+                    <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm mb-4 border border-gray-100 dark:border-white/5">
+                        <div class="flex items-start gap-4">
+                            <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0">
+                                ${initials}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-lg font-bold text-gray-900 dark:text-white leading-none mb-1">${client.client_name}</h3>
+                                <div class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-2 text-gray-700 dark:text-gray-300 cursor-pointer" onclick="openMaps('${client.address}')">
+                                        <span class="material-symbols-outlined text-[18px] text-primary shrink-0">location_on</span>
+                                        <p class="text-base font-medium leading-normal truncate hover:text-primary underline decoration-dotted">${client.address}</p>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                        <span class="material-symbols-outlined text-[18px] text-gray-400 shrink-0">phone</span>
+                                        <p class="text-sm font-medium leading-normal truncate">${phone}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-gray-100 dark:border-white/5">
+                            <a href="tel:${phone}" class="flex items-center justify-center gap-2 h-10 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold text-base active:bg-green-200">
+                                <span class="material-symbols-outlined text-xl">call</span>
+                                <span>Call</span>
+                            </a>
+                            <button onclick="openMaps('${client.address}')" class="flex items-center justify-center gap-2 h-10 rounded-md bg-primary/10 text-primary font-bold text-base active:bg-primary/20">
+                                <span class="material-symbols-outlined text-xl">directions</span>
+                                <span>Directions</span>
+                            </button>
+                        </div>
+                    </div>`;
+                    container.innerHTML += html;
+                });
+            };
+
+            // Search/Filter Function
+            window.filterContacts = function() {
+                const query = document.getElementById('contact-search').value.toLowerCase();
+                const filtered = window.allContacts.filter(c => 
+                    c.client_name.toLowerCase().includes(query) || 
+                    (c.address && c.address.toLowerCase().includes(query)) ||
+                    (c.phone_number && c.phone_number.includes(query))
+                );
+                renderContacts(filtered);
             };
 
 
