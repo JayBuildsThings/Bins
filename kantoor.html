@@ -7,7 +7,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Using a specific version of Supabase for stability -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
     
     <script>
         tailwind.config = {
@@ -28,12 +30,18 @@
         <header class="flex items-center justify-between mb-10 border-b border-gray-200 pb-6">
             <div>
                 <h1 class="text-3xl font-extrabold text-dark tracking-tight">CONTROL <span class="text-primary">ROOM</span></h1>
-                <p class="text-gray-500 text-sm">Master Data Management</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <span id="connection-dot" class="w-2 h-2 rounded-full bg-yellow-400"></span>
+                    <p id="connection-status" class="text-gray-500 text-sm">Initializing...</p>
+                </div>
             </div>
-            <a href="index.html" class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                <span>Go to App</span>
-                <span class="material-symbols-outlined">open_in_new</span>
-            </a>
+            <div class="flex items-center gap-4">
+                <button onclick="location.reload()" class="text-xs font-bold text-gray-400 hover:text-dark">RELOAD</button>
+                <a href="index.html" class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                    <span>Go to App</span>
+                    <span class="material-symbols-outlined">open_in_new</span>
+                </a>
+            </div>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -51,7 +59,7 @@
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Current Passcode</label>
                         <div class="flex gap-2">
-                            <input type="text" id="current-passcode" disabled value="Loading..." 
+                            <input type="text" id="current-passcode" disabled value="Waiting for DB..." 
                                    class="w-full bg-gray-50 border-none rounded-lg text-gray-500 font-mono tracking-widest text-lg">
                         </div>
                     </div>
@@ -59,14 +67,13 @@
                     <div class="pt-4 border-t border-gray-100">
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Set New Passcode</label>
                         <div class="flex gap-2">
-                            <input type="text" id="new-passcode" placeholder="4 Digits (e.g. 5678)" maxlength="4" pattern="\d{4}"
+                            <input type="text" id="new-passcode" placeholder="4 Digits" maxlength="4"
                                    class="w-full bg-white border-2 border-gray-100 rounded-lg focus:border-primary focus:ring-0 font-bold text-lg">
-                            <button onclick="updatePasscode()" 
-                                    class="bg-dark text-white px-6 rounded-lg font-bold hover:bg-black transition-colors">
+                            <button id="btn-update-pass" onclick="updatePasscode()" 
+                                    class="bg-dark text-white px-6 rounded-lg font-bold hover:bg-black transition-colors disabled:opacity-50">
                                 Update
                             </button>
                         </div>
-                        <p class="text-xs text-gray-400 mt-2">This code will be required for all users to submit logs.</p>
                     </div>
                 </div>
             </section>
@@ -80,14 +87,14 @@
                         </div>
                         <h2 class="text-xl font-bold">Master Bins</h2>
                     </div>
-                    <span id="bin-count" class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold">0 Bins</span>
+                    <span id="bin-count" class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold">... Bins</span>
                 </div>
 
                 <!-- Add Bin Form -->
                 <div class="flex gap-2 mb-6">
-                    <input type="text" id="new-bin-id" placeholder="Add Bin ID (e.g. 31)" 
+                    <input type="text" id="new-bin-id" placeholder="Add Bin ID" 
                            class="flex-1 bg-gray-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <button onclick="addBin()" class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors">
+                    <button id="btn-add-bin" onclick="addBin()" class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50">
                         <span class="material-symbols-outlined">add</span>
                     </button>
                 </div>
@@ -96,7 +103,10 @@
                 <div class="relative">
                     <div class="absolute inset-0 border-t border-gray-100"></div>
                     <div id="bin-list" class="h-[400px] overflow-y-auto pr-2 space-y-2 pt-4">
-                        <p class="text-center text-gray-400 mt-10">Connecting to database...</p>
+                        <div class="flex flex-col items-center justify-center mt-10 text-gray-400 space-y-4">
+                            <div class="w-8 h-8 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+                            <p id="bin-status-msg">Connecting to database...</p>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -105,21 +115,45 @@
     </div>
 
     <script>
-        // --- SUPABASE CONFIG (Corrected Key ending in 119) ---
+        // --- CREDENTIALS ---
         const supabaseUrl = 'https://heuhhpjdcphdcrpwmirl.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhldWhocGpkY3BoZGNycHdtaXJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NzIxMTksImV4cCI6MjA4MTU0ODExOX0.FGaDzZFo26DJvMOo5KshwtKLlCXSxVyz-bGBJkD26dI';
         
         let supabase;
 
-        window.onload = function() {
+        async function init() {
+            const statusText = document.getElementById('connection-status');
+            const binStatusText = document.getElementById('bin-status-msg');
+            const dot = document.getElementById('connection-dot');
+
             try {
+                // Step 1: Check Library
+                statusText.innerText = "Checking Supabase library...";
+                if (!window.supabase) {
+                    throw new Error("Supabase library not found. Check your internet connection.");
+                }
+
+                // Step 2: Create Client
+                statusText.innerText = "Creating client...";
                 supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-                fetchPasscode();
-                fetchBins();
+
+                // Step 3: Fetch Data
+                statusText.innerText = "Fetching master data...";
+                binStatusText.innerText = "Querying tables...";
+                
+                await Promise.all([fetchPasscode(), fetchBins()]);
+
+                // Success
+                statusText.innerText = "Connected to Supabase";
+                dot.classList.replace('bg-yellow-400', 'bg-green-500');
+
             } catch (err) {
-                alert("Supabase Initialization Failed: " + err.message);
+                console.error(err);
+                statusText.innerText = "Connection Failed";
+                dot.classList.replace('bg-yellow-400', 'bg-red-500');
+                binStatusText.innerHTML = `<span class="text-red-500 font-bold">${err.message}</span><br><button onclick="location.reload()" class="mt-4 bg-dark text-white px-4 py-2 rounded-lg text-sm">Retry</button>`;
             }
-        };
+        }
 
         // --- PASSCODE FUNCTIONS ---
         async function fetchPasscode() {
@@ -127,31 +161,28 @@
                 .from('app_settings')
                 .select('setting_value')
                 .eq('setting_key', 'submission_passcode')
-                .single();
+                .maybeSingle(); // maybeSingle handles "no rows" without a big error
             
-            if (error) {
-                console.error("Passcode Fetch Error:", error);
-                document.getElementById('current-passcode').value = "Error loading";
-            } else if (data) {
+            if (error) throw new Error("Settings Table Error: " + error.message);
+            
+            if (data) {
                 document.getElementById('current-passcode').value = data.setting_value;
+            } else {
+                document.getElementById('current-passcode').value = "Not Set";
             }
         }
 
         async function updatePasscode() {
-            const newVal = document.getElementById('new-passcode').value;
-            if (newVal.length < 4) {
-                alert("Passcode must be 4 digits.");
-                return;
-            }
+            const newVal = document.getElementById('new-passcode').value.trim();
+            if (newVal.length < 4) return alert("Min 4 digits");
 
             const { error } = await supabase
                 .from('app_settings')
                 .upsert({ setting_key: 'submission_passcode', setting_value: newVal });
 
-            if (error) {
-                alert("Update Failed: " + error.message);
-            } else {
-                alert("Passcode updated!");
+            if (error) alert(error.message);
+            else {
+                alert("Updated!");
                 document.getElementById('new-passcode').value = "";
                 fetchPasscode();
             }
@@ -165,38 +196,33 @@
                 .from('master_bins')
                 .select('*');
             
-            if (error) {
-                alert("Bins Fetch Error: " + error.message + "\n\nDid you run the SQL code to create the 'master_bins' table?");
-                listContainer.innerHTML = `<p class="text-center text-red-500 mt-10">Error: ${error.message}</p>`;
+            if (error) throw new Error("Bins Table Error: " + error.message);
+
+            document.getElementById('bin-count').innerText = `${data ? data.length : 0} Bins`;
+            listContainer.innerHTML = "";
+            
+            if (!data || data.length === 0) {
+                listContainer.innerHTML = `<p class="text-center text-gray-400 mt-10">No bins found. Add one above.</p>`;
                 return;
             }
 
-            if (data) {
-                // Natural sort (1, 2, 10 instead of 1, 10, 2)
-                data.sort((a, b) => a.bin_id.localeCompare(b.bin_id, undefined, { numeric: true }));
-                
-                document.getElementById('bin-count').innerText = `${data.length} Bins`;
-                listContainer.innerHTML = "";
-                
-                if (data.length === 0) {
-                    listContainer.innerHTML = `<p class="text-center text-gray-400 mt-10">No bins found. Add one above.</p>`;
-                }
+            // Natural sort
+            data.sort((a, b) => a.bin_id.localeCompare(b.bin_id, undefined, { numeric: true }));
 
-                data.forEach(bin => {
-                    const el = document.createElement('div');
-                    el.className = "flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg hover:border-blue-200 transition-colors group";
-                    el.innerHTML = `
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-gray-300">delete</span>
-                            <span class="font-bold text-gray-700">Bin #${bin.bin_id}</span>
-                        </div>
-                        <button onclick="deleteBin('${bin.bin_id}')" class="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span class="material-symbols-outlined">cancel</span>
-                        </button>
-                    `;
-                    listContainer.appendChild(el);
-                });
-            }
+            data.forEach(bin => {
+                const el = document.createElement('div');
+                el.className = "flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg hover:border-blue-200 transition-colors group";
+                el.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-gray-300">delete</span>
+                        <span class="font-bold text-gray-700">Bin #${bin.bin_id}</span>
+                    </div>
+                    <button onclick="deleteBin('${bin.bin_id}')" class="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span class="material-symbols-outlined">cancel</span>
+                    </button>
+                `;
+                listContainer.appendChild(el);
+            });
         }
 
         async function addBin() {
@@ -204,10 +230,8 @@
             if (!id) return;
 
             const { error } = await supabase.from('master_bins').insert([{ bin_id: id }]);
-            
-            if (error) {
-                alert("Error adding bin: " + error.message);
-            } else {
+            if (error) alert(error.message);
+            else {
                 document.getElementById('new-bin-id').value = "";
                 fetchBins();
             }
@@ -215,11 +239,13 @@
 
         async function deleteBin(id) {
             if(!confirm(`Delete Bin #${id}?`)) return;
-            
             const { error } = await supabase.from('master_bins').delete().eq('bin_id', id);
-            if (error) alert("Delete failed: " + error.message);
+            if (error) alert(error.message);
             else fetchBins();
         }
+
+        // Start initialization
+        init();
     </script>
 </body>
 </html>
