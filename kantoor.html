@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>SwiftBins Control Room</title>
+    <title>Bin Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
@@ -13,7 +13,12 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: { "primary": "#ec1313", "dark": "#221010" },
+                    colors: { 
+                        "primary": "#ec1313", 
+                        "dark": "#221010",
+                        "status-green": "#10b981",
+                        "status-gray": "#9ca3af"
+                    },
                     fontFamily: { "display": ["Lexend", "sans-serif"] }
                 }
             }
@@ -28,58 +33,105 @@
             <div class="w-20 h-20 bg-red-50 text-primary rounded-full flex items-center justify-center mx-auto mb-6">
                 <span class="material-symbols-outlined text-4xl">vpn_key</span>
             </div>
-            <h2 class="text-2xl font-black mb-2">Team Vault</h2>
-            <p class="text-gray-500 text-sm mb-8">Enter your Shared Access Key to manage the Control Room.</p>
-            <input type="password" id="access-key-input" placeholder="Enter Team Key" 
+            <h2 class="text-2xl font-black mb-2">Private Vault</h2>
+            <p class="text-gray-500 text-sm mb-8">Enter Team Key to access Dashboard.</p>
+            <input type="password" id="access-key-input" placeholder="Enter Access Key" 
                    class="w-full h-14 bg-gray-100 border-none rounded-xl text-center font-bold tracking-widest mb-4 focus:ring-2 focus:ring-primary">
             <button onclick="unlockApp()" class="w-full h-14 bg-primary text-white font-bold rounded-xl shadow-lg active:scale-95 transition-transform">
-                UNLOCK SYSTEM
+                UNLOCK DASHBOARD
             </button>
         </div>
     </div>
 
-    <div class="max-w-4xl mx-auto min-h-screen p-6">
-        <header class="flex items-center justify-between mb-10 border-b border-gray-200 pb-6">
+    <!-- MAIN CONTENT -->
+    <div class="max-w-7xl mx-auto min-h-screen p-6">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-gray-200 pb-6">
             <div>
-                <h1 class="text-3xl font-extrabold text-dark tracking-tight">CONTROL <span class="text-primary">ROOM</span></h1>
-                <div class="flex items-center gap-2 mt-1">
-                    <span id="connection-dot" class="w-2 h-2 rounded-full bg-yellow-400"></span>
-                    <p id="connection-status" class="text-gray-500 text-sm">Initializing...</p>
-                </div>
+                <h1 class="text-3xl font-extrabold text-dark tracking-tight">BIN <span class="text-primary">DASHBOARD</span></h1>
+                <p class="text-gray-500 text-sm mt-1">Real-time inventory management</p>
             </div>
             <div class="flex items-center gap-4">
-                <button onclick="logout()" class="text-xs font-bold text-red-500 hover:underline">LOGOUT</button>
+                <div class="px-4 py-2 bg-dark text-white rounded-lg font-bold text-sm">Overview</div>
+                <div class="w-px h-8 bg-gray-200 mx-2"></div>
                 <a href="index.html" class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                    <span>Go to App</span>
-                    <span class="material-symbols-outlined">open_in_new</span>
+                    <span>Open App</span>
+                    <span class="material-symbols-outlined text-lg">open_in_new</span>
                 </a>
             </div>
         </header>
 
-        <div class="max-w-md mx-auto">
-            <section class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center gap-3">
-                        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                            <span class="material-symbols-outlined text-2xl">delete</span>
-                        </div>
-                        <h2 class="text-xl font-bold">Master Bins</h2>
+        <!-- VIEW: OVERVIEW -->
+        <div id="view-overview" class="block">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                        <span class="material-symbols-outlined">inventory_2</span>
                     </div>
-                    <span id="bin-count" class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold">... Bins</span>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase">Total Bins</p>
+                        <p id="stat-total" class="text-2xl font-black text-dark">--</p>
+                    </div>
                 </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                    <div class="p-3 bg-green-50 text-green-600 rounded-xl">
+                        <span class="material-symbols-outlined">local_shipping</span>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase">Delivered</p>
+                        <p id="stat-delivered" class="text-2xl font-black text-dark">--</p>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                    <div class="p-3 bg-gray-100 text-gray-600 rounded-xl">
+                        <span class="material-symbols-outlined">warehouse</span>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase">Not at site</p>
+                        <p id="stat-warehouse" class="text-2xl font-black text-dark">--</p>
+                    </div>
+                </div>
+            </div>
 
-                <div class="flex gap-2 mb-6">
-                    <input type="text" id="new-bin-id" placeholder="Add Bin ID" class="flex-1 bg-gray-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <button onclick="addBin()" class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors">
-                        <span class="material-symbols-outlined">add</span>
+            <!-- Search & Filter -->
+            <div class="bg-white p-4 rounded-t-2xl border border-gray-200 border-b-0 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="relative w-full md:w-96">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+                    <input type="text" id="table-search" placeholder="Search Bin #, Client, or Address..." 
+                           class="w-full pl-10 pr-4 py-2 bg-gray-50 border-gray-200 rounded-lg focus:ring-primary focus:border-primary text-sm"
+                           oninput="filterTable()">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="fetchDashboardData()" class="p-2 text-gray-400 hover:text-primary transition-colors" title="Refresh">
+                        <span class="material-symbols-outlined">refresh</span>
                     </button>
                 </div>
+            </div>
 
-                <div id="bin-list" class="h-[500px] overflow-y-auto pr-2 space-y-2">
-                    <p class="text-center text-gray-400 mt-10">Loading...</p>
+            <!-- Data Table -->
+            <div class="bg-white rounded-b-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-gray-500 font-bold uppercase text-xs">
+                            <tr>
+                                <th class="px-6 py-4">Bin #</th>
+                                <th class="px-6 py-4">Current Status</th>
+                                <th class="px-6 py-4">Days at Site</th>
+                                <th class="px-6 py-4">Client</th>
+                                <th class="px-6 py-4">Location</th>
+                                <th class="px-6 py-4">Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-body" class="divide-y divide-gray-100">
+                            <tr><td colspan="6" class="px-6 py-10 text-center text-gray-400">Loading data...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
-            </section>
+            </div>
         </div>
+
     </div>
 
     <script>
@@ -87,6 +139,9 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhldWhocGpkY3BoZGNycHdtaXJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NzIxMTksImV4cCI6MjA4MTU0ODExOX0.FGaDzZFo26DJvMOo5KshwtKLlCXSxVyz-bGBJkD26dI';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+        let allRows = [];
+
+        // --- INIT ---
         async function init() {
             const sharedKey = localStorage.getItem('swift_access_key');
             if (!sharedKey) {
@@ -95,15 +150,10 @@
             }
 
             try {
-                // Set the session key in Postgres for RLS
                 await supabase.rpc('set_session_key', { key: sharedKey });
-                
-                document.getElementById('connection-status').innerText = "Vault Unlocked";
-                document.getElementById('connection-dot').classList.replace('bg-yellow-400', 'bg-green-500');
-                fetchBins();
+                fetchDashboardData();
             } catch (err) {
                 console.error(err);
-                document.getElementById('connection-status').innerText = "Vault Error";
             }
         }
 
@@ -115,48 +165,77 @@
             }
         };
 
-        window.logout = function() {
-            localStorage.removeItem('swift_access_key');
-            location.reload();
-        };
+        // --- DASHBOARD LOGIC ---
+        async function fetchDashboardData() {
+            const tbody = document.getElementById('dashboard-body');
+            const { data: bins } = await supabase.from('master_bins').select('bin_id');
+            const { data: logs } = await supabase.from('activity_logs').select('*').order('created_at', { ascending: false });
 
-        async function fetchBins() {
-            const listContainer = document.getElementById('bin-list');
-            const { data, error } = await supabase.from('master_bins').select('*');
-            
-            if (error) {
-                listContainer.innerHTML = `<p class="text-red-500 text-center">RLS Refused Access</p>`;
-                return;
-            }
+            if (!bins || !logs) return;
 
-            document.getElementById('bin-count').innerText = `${data.length} Bins`;
-            listContainer.innerHTML = "";
-            data.sort((a, b) => a.bin_id.localeCompare(b.bin_id, undefined, { numeric: true }));
+            const binMap = new Map();
+            bins.forEach(b => {
+                binMap.set(b.bin_id, { id: b.bin_id, status: 'Not at site', days: '-', client: '-', address: '-', date: '-', rawDate: 0 });
+            });
 
-            data.forEach(bin => {
-                const el = document.createElement('div');
-                el.className = "flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg group";
-                el.innerHTML = `<span class="font-bold text-gray-700">Bin #${bin.bin_id}</span>
-                                <button onclick="deleteBin('${bin.bin_id}')" class="text-gray-300 hover:text-red-500 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined">cancel</span></button>`;
-                listContainer.appendChild(el);
+            logs.forEach(log => {
+                if (binMap.has(log.bin_id)) {
+                    const currentEntry = binMap.get(log.bin_id);
+                    if (currentEntry.rawDate === 0) {
+                        let status = 'Not at site';
+                        let days = '-';
+                        if (log.activity_type === 'Deliver') {
+                            status = 'Delivered';
+                            const diffTime = Math.floor((new Date() - new Date(log.created_at)) / (1000 * 60 * 60 * 24));
+                            days = diffTime === 0 ? 'Today' : `${diffTime} day${diffTime === 1 ? '' : 's'}`;
+                        }
+                        binMap.set(log.bin_id, {
+                            id: log.bin_id,
+                            status: status,
+                            days: days,
+                            client: log.client_name || '-',
+                            address: log.address || '-',
+                            date: new Date(log.created_at).toLocaleDateString(),
+                            rawDate: new Date(log.created_at).getTime()
+                        });
+                    }
+                }
+            });
+
+            allRows = Array.from(binMap.values()).sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+            updateStats();
+            renderTable(allRows);
+        }
+
+        function renderTable(rows) {
+            const tbody = document.getElementById('dashboard-body');
+            tbody.innerHTML = '';
+            rows.forEach(row => {
+                const isDelivered = row.status === 'Delivered';
+                const statusClass = isDelivered ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200';
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition-colors group">
+                        <td class="px-6 py-4 font-black text-dark">#${row.id}</td>
+                        <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wide border ${statusClass}">${row.status}</span></td>
+                        <td class="px-6 py-4 font-bold text-gray-600">${row.days}</td>
+                        <td class="px-6 py-4 font-medium text-gray-700">${row.client}</td>
+                        <td class="px-6 py-4 text-gray-500 max-w-xs truncate" title="${row.address}">${row.address}</td>
+                        <td class="px-6 py-4 text-gray-400 text-xs font-mono">${row.date}</td>
+                    </tr>`;
             });
         }
 
-        async function addBin() {
-            const id = document.getElementById('new-bin-id').value.trim();
-            const sharedKey = localStorage.getItem('swift_access_key');
-            if (!id || !sharedKey) return;
-
-            const { error } = await supabase.from('master_bins').insert([{ bin_id: id, access_key: sharedKey }]);
-            if (error) alert(error.message);
-            else { document.getElementById('new-bin-id').value = ""; fetchBins(); }
+        function updateStats() {
+            document.getElementById('stat-total').innerText = allRows.length;
+            document.getElementById('stat-delivered').innerText = allRows.filter(r => r.status === 'Delivered').length;
+            document.getElementById('stat-warehouse').innerText = allRows.length - allRows.filter(r => r.status === 'Delivered').length;
         }
 
-        async function deleteBin(id) {
-            if(!confirm(`Delete Bin #${id}?`)) return;
-            await supabase.from('master_bins').delete().eq('bin_id', id);
-            fetchBins();
-        }
+        window.filterTable = function() {
+            const query = document.getElementById('table-search').value.toLowerCase();
+            const filtered = allRows.filter(r => r.id.toLowerCase().includes(query) || r.client.toLowerCase().includes(query) || r.address.toLowerCase().includes(query));
+            renderTable(filtered);
+        };
 
         init();
     </script>
