@@ -178,7 +178,7 @@
             </div>
             
             <div class="mt-8 text-center">
-                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.32 • LOGOUT</button>
+                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.33 • LOGOUT</button>
             </div>
         </div>
     </section>
@@ -498,10 +498,8 @@
             window.showToast("Details autofilled from request");
         };
 
-        // --- OTHER LOAD FUNCTIONS (Bin Locations, Contacts, Requests) ---
-        // (Kept mostly same, but Contacts view could ostensibly pull from clients table if preferred, sticking to logs for safety for now)
         window.loadBinLocations = async function() {
-             const container = document.getElementById('bin-list-container');
+            const container = document.getElementById('bin-list-container');
             const { data, error } = await supabase.from('activity_logs').select('*').order('created_at', { ascending: false });
             if (error) { container.innerHTML = `<p class="text-center text-red-500 mt-10">Access Denied</p>`; return; }
             
@@ -553,29 +551,87 @@
             });
         };
 
+        // --- UPDATED CONTACT LOADING: USES CLIENTS TABLE ---
         window.loadContacts = async function() {
             const container = document.getElementById('contact-list-container');
-            const { data, error } = await supabase.from('activity_logs').select('*').order('created_at', { ascending: false });
-            if (error) return;
-            const uniqueClients = new Map();
-            data.forEach(log => { if(log.client_name && !uniqueClients.has(log.client_name)) uniqueClients.set(log.client_name, log); });
-            window.allContacts = Array.from(uniqueClients.values()).sort((a,b) => a.client_name.localeCompare(b.client_name));
-            renderContacts(window.allContacts);
+            container.innerHTML = `<p class="text-center text-gray-500 mt-10 animate-pulse">Loading contacts...</p>`;
+
+            // Fetch from clients table (with addresses)
+            const { data: clients, error } = await supabase
+                .from('clients')
+                .select('*, client_addresses(*)')
+                .order('name');
+
+            if (error || !clients) { 
+                // Fallback to logs if empty/error (legacy)
+                loadContactsFromLogs(container);
+                return;
+            }
+            
+            if(clients.length === 0) {
+                 container.innerHTML = `<p class="text-center text-gray-500 mt-10">No clients found. Add them in Dashboard.</p>`;
+                 return;
+            }
+
+            // Render
+            container.innerHTML = clients.map(c => {
+                // Address List HTML
+                const addressHtml = c.client_addresses && c.client_addresses.length > 0 
+                    ? c.client_addresses.map(a => `
+                        <div class="flex justify-between items-center bg-gray-50 dark:bg-white/5 p-2 rounded mb-1">
+                            <span class="text-sm text-gray-600 dark:text-gray-400 truncate flex-1 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[16px]">location_on</span>
+                                ${a.address}
+                            </span>
+                            <button onclick="openMaps('${a.address}')" class="text-blue-600 dark:text-blue-400 font-bold text-xs bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/50">Map</button>
+                        </div>
+                    `).join('')
+                    : '<p class="text-xs text-gray-400 italic pl-1">No linked addresses</p>';
+
+                return `
+                    <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm mb-4 border border-gray-100 dark:border-white/5">
+                        <div class="flex items-center gap-4 mb-3">
+                            <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0">
+                                ${c.name ? c.name[0].toUpperCase() : '?'}
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900 dark:text-white">${c.name}</h3>
+                                <a href="tel:${c.phone}" class="text-sm text-gray-500 flex items-center gap-1 hover:text-green-600"><span class="material-symbols-outlined text-sm">phone</span>${c.phone || 'No phone'}</a>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-1 mb-3">
+                            ${addressHtml}
+                        </div>
+
+                        ${c.phone ? `
+                        <a href="tel:${c.phone}" class="w-full h-10 bg-green-100 text-green-700 rounded-lg font-bold flex items-center justify-center gap-2 text-sm hover:bg-green-200 transition-colors">
+                            <span class="material-symbols-outlined text-lg">call</span> Call
+                        </a>` : ''}
+                    </div>
+                `;
+            }).join('');
         };
 
-        function renderContacts(contacts) {
-            const container = document.getElementById('contact-list-container');
-            container.innerHTML = contacts.map(c => `
-                <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm mb-4 border border-gray-100 dark:border-white/5">
+        // Fallback function if client table is empty
+        async function loadContactsFromLogs(container) {
+             const { data } = await supabase.from('activity_logs').select('*').order('created_at', { ascending: false });
+             if(!data) return;
+             const uniqueClients = new Map();
+             data.forEach(log => { if(log.client_name && !uniqueClients.has(log.client_name)) uniqueClients.set(log.client_name, log); });
+             const contacts = Array.from(uniqueClients.values()).sort((a,b) => a.client_name.localeCompare(b.client_name));
+             
+             container.innerHTML = contacts.map(c => `
+                <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm mb-4 border border-gray-100 dark:border-white/5 opacity-75">
+                    <p class="text-xs text-red-400 mb-2 font-bold uppercase">Legacy Contact (Not in DB)</p>
                     <div class="flex items-start gap-4">
-                        <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0">${c.client_name[0]}</div>
+                        <div class="h-12 w-12 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-xl font-bold shrink-0">${c.client_name[0]}</div>
                         <div class="flex-1">
                             <h3 class="text-lg font-bold mb-1">${c.client_name}</h3>
                             <p class="text-sm text-gray-500 mb-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">location_on</span>${c.address}</p>
                             <p class="text-sm text-gray-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">phone</span>${c.phone_number}</p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 mt-4"><a href="tel:${c.phone_number}" class="bg-green-100 text-green-700 h-10 rounded-md font-bold flex items-center justify-center gap-2 text-sm"><span class="material-symbols-outlined text-xl">call</span>Call</a><button onclick="openMaps('${c.address}')" class="bg-primary/10 text-primary h-10 rounded-md font-bold flex items-center justify-center gap-2 text-sm"><span class="material-symbols-outlined text-xl">directions</span>Directions</button></div>
                 </div>`).join('');
         }
         
