@@ -178,7 +178,7 @@
             </div>
             
             <div class="mt-8 text-center">
-                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.29 • LOGOUT</button>
+                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.32 • LOGOUT</button>
             </div>
         </div>
     </section>
@@ -313,6 +313,7 @@
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         window.masterBins = []; 
+        window.requestsData = []; // Store requests globally for conversion
 
         async function initSecurity() {
             const sharedKey = localStorage.getItem('swift_access_key');
@@ -485,15 +486,38 @@
                 </div>`).join('');
         }
 
+        // --- CONVERT REQUEST TO ACTIVITY ---
+        window.convertRequestToActivity = function(index) {
+            const req = window.requestsData[index];
+            if (!req) return;
+
+            // 1. Determine Activity Type
+            let activityType = 'Deliver'; // Default
+            if (req.request_type && req.request_type.toLowerCase().includes('pickup')) {
+                activityType = 'PickUp';
+            }
+
+            // 2. Populate Log Activity Fields
+            document.getElementById('log-type').value = activityType;
+            document.getElementById('log-client-name').value = req.client_name || '';
+            document.getElementById('log-address').value = req.address || '';
+            document.getElementById('log-phone').value = req.phone || '';
+            document.getElementById('log-bin-id').value = ''; // Reset bin ID as it needs to be selected manually
+
+            // 3. Navigate
+            navigateTo('view-log-activity');
+            window.showToast("Details autofilled from request");
+        };
+
         window.loadRequests = async function() {
             const container = document.getElementById('requests-list-container');
             container.innerHTML = `<p class="text-center text-gray-500 mt-10 animate-pulse">Loading requests...</p>`;
             
             try {
+                // Fetch All Requests (Unsorted by SQL)
                 const { data, error } = await supabase
                     .from('service_requests')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+                    .select('*');
                 
                 if (error) throw error;
                 if (!data || data.length === 0) {
@@ -501,31 +525,41 @@
                     return;
                 }
 
-                container.innerHTML = data.map(req => {
+                // SAVE DATA FOR CLICK HANDLER
+                window.requestsData = data.sort((a, b) => {
+                    const getEffectiveDate = (req) => {
+                        const match = (req.notes || '').match(/(NEEDED ON|PICKUP ON):\s*(\d{4}-\d{2}-\d{2})/);
+                        return match ? new Date(match[2]) : new Date(req.created_at);
+                    };
+                    const dayA = new Date(getEffectiveDate(a)).setHours(0,0,0,0);
+                    const dayB = new Date(getEffectiveDate(b)).setHours(0,0,0,0);
+                    
+                    if (dayA !== dayB) return dayA - dayB;
+                    return new Date(a.created_at) - new Date(b.created_at);
+                });
+
+                container.innerHTML = window.requestsData.map((req, index) => {
                     const isPickup = req.request_type === 'Pickup';
                     const icon = isPickup ? 'local_shipping' : 'delete';
                     const color = isPickup ? 'text-green-600 bg-green-50' : 'text-blue-600 bg-blue-50';
                     const dateStr = new Date(req.created_at).toLocaleDateString();
 
-                    // --- PARSE DATE FROM NOTES ---
                     let displayNotes = req.notes || '';
                     let dateBadgeHtml = '';
                     
-                    // Regex looks for "NEEDED ON: YYYY-MM-DD" or "PICKUP ON: YYYY-MM-DD"
                     const dateMatch = displayNotes.match(/(NEEDED ON|PICKUP ON):\s*(\d{4}-\d{2}-\d{2})/);
                     
                     if (dateMatch) {
-                        const dateVal = dateMatch[2]; // e.g. 2024-12-05
-                        displayNotes = displayNotes.replace(dateMatch[0], '').trim(); // Remove date line from notes
+                        const dateVal = dateMatch[2];
+                        displayNotes = displayNotes.replace(dateMatch[0], '').trim();
                         
-                        // Check if urgency
                         const targetDate = new Date(dateVal);
                         const today = new Date();
                         const diffTime = targetDate - today;
                         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
                         
-                        let badgeColor = "bg-gray-100 text-gray-600 border-gray-200"; // Default
-                        if (diffDays <= 1) badgeColor = "bg-orange-100 text-orange-700 border-orange-200"; // Urgent
+                        let badgeColor = "bg-gray-100 text-gray-600 border-gray-200"; 
+                        if (diffDays <= 1) badgeColor = "bg-orange-100 text-orange-700 border-orange-200";
 
                         dateBadgeHtml = `
                             <div class="mt-2 flex">
@@ -553,10 +587,14 @@
                                 
                                 ${dateBadgeHtml}
 
-                                ${displayNotes ? `<p class="text-xs text-gray-400 mt-2 bg-gray-50 p-2 rounded-lg italic">"${displayNotes}"</p>` : ''}
+                                ${displayNotes ? `<p class="text-sm text-slate-700 dark:text-slate-300 mt-3 bg-slate-50 dark:bg-white/5 p-3 rounded-lg border border-slate-100 dark:border-white/10">"${displayNotes}"</p>` : ''}
                             </div>
                         </div>
                         <div class="mt-4 pt-3 border-t border-gray-100 flex flex-col gap-2">
+                             <!-- NEW TURN INTO ACTIVITY BUTTON -->
+                             <button onclick="convertRequestToActivity(${index})" class="w-full h-10 bg-primary text-white rounded-lg flex items-center justify-center font-bold text-sm gap-2 shadow-sm hover:bg-red-600 active:scale-95 transition-all">
+                                <span class="material-symbols-outlined text-lg">add_task</span> Turn into Activity
+                            </button>
                              <button onclick="openMaps('${req.address}')" class="w-full h-10 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center font-bold text-sm gap-2">
                                 <span class="material-symbols-outlined text-lg">map</span> Open Maps
                             </button>
