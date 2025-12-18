@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { 
+                        "primary": "#ec1313", 
+                        "dark": "#221010",
+                        "status-green": "#10b981",
+                        "status-gray": "#9ca3af"
+                    },
+                    fontFamily: { "display": ["Lexend", "sans-serif"] }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-slate-900 font-display">
+
+    <!-- LOCK SCREEN OVERLAY -->
+    <div id="lock-screen" class="fixed inset-0 z-[100] bg-dark flex items-center justify-center p-6 hidden">
+        <div class="max-w-sm w-full bg-white rounded-3xl p-8 shadow-2xl text-center">
+            <div class="w-20 h-20 bg-red-50 text-primary rounded-full flex items-center justify-center mx-auto mb-6">
+                <span class="material-symbols-outlined text-4xl">vpn_key</span>
+            </div>
+            <h2 class="text-2xl font-black mb-2">Private Vault</h2>
+            <p class="text-gray-500 text-sm mb-8">Enter Team Key to access Dashboard.</p>
+            <input type="password" id="access-key-input" placeholder="Enter Access Key" 
+                   class="w-full h-14 bg-gray-100 border-none rounded-xl text-center font-bold tracking-widest mb-4 focus:ring-2 focus:ring-primary">
+            <button onclick="unlockApp()" class="w-full h-14 bg-primary text-white font-bold rounded-xl shadow-lg active:scale-95 transition-transform">
+                UNLOCK DASHBOARD
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="max-w-7xl mx-auto min-h-screen p-6">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-gray-200 pb-6">
+            <div>
+                <h1 class="text-3xl font-extrabold text-dark tracking-tight">BIN <span class="text-primary">DASHBOARD</span></h1>
+                <p class="text-gray-500 text-sm mt-1">Real-time inventory status</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="kantoor.html" class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors bg-white border border-gray-200 px-4 py-2 rounded-lg">
+                    <span class="material-symbols-outlined text-lg">settings</span>
+                    <span>Control Room</span>
+                </a>
+                <a href="index.html" class="flex items-center gap-2 text-sm font-bold text-white bg-dark hover:bg-black transition-colors px-4 py-2 rounded-lg shadow-lg">
+                    <span>Open App</span>
+                    <span class="material-symbols-outlined text-lg">open_in_new</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                    <span class="material-symbols-outlined">inventory_2</span>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">Total Bins</p>
+                    <p id="stat-total" class="text-2xl font-black text-dark">--</p>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                <div class="p-3 bg-green-50 text-green-600 rounded-xl">
+                    <span class="material-symbols-outlined">local_shipping</span>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">Delivered</p>
+                    <p id="stat-delivered" class="text-2xl font-black text-dark">--</p>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                <div class="p-3 bg-gray-100 text-gray-600 rounded-xl">
+                    <span class="material-symbols-outlined">warehouse</span>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">Not at site</p>
+                    <p id="stat-warehouse" class="text-2xl font-black text-dark">--</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search & Filter -->
+        <div class="bg-white p-4 rounded-t-2xl border border-gray-200 border-b-0 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div class="relative w-full md:w-96">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+                <input type="text" id="table-search" placeholder="Search Bin #, Client, or Address..." 
+                       class="w-full pl-10 pr-4 py-2 bg-gray-50 border-gray-200 rounded-lg focus:ring-primary focus:border-primary text-sm"
+                       oninput="filterTable()">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="fetchDashboardData()" class="p-2 text-gray-400 hover:text-primary transition-colors" title="Refresh">
+                    <span class="material-symbols-outlined">refresh</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="bg-white rounded-b-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 text-gray-500 font-bold uppercase text-xs">
+                        <tr>
+                            <th class="px-6 py-4">Bin #</th>
+                            <th class="px-6 py-4">Current Status</th>
+                            <th class="px-6 py-4">Client</th>
+                            <th class="px-6 py-4">Location</th>
+                            <th class="px-6 py-4">Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboard-body" class="divide-y divide-gray-100">
+                        <tr>
+                            <td colspan="5" class="px-6 py-10 text-center text-gray-400">Loading data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://heuhhpjdcphdcrpwmirl.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhldWhocGpkY3BoZGNycHdtaXJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NzIxMTksImV4cCI6MjA4MTU0ODExOX0.FGaDzZFo26DJvMOo5KshwtKLlCXSxVyz-bGBJkD26dI';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let allRows = []; // Store for filtering
+
+        async function init() {
+            const sharedKey = localStorage.getItem('swift_access_key');
+            if (!sharedKey) {
+                document.getElementById('lock-screen').classList.remove('hidden');
+                return;
+            }
+
+            try {
+                await supabase.rpc('set_session_key', { key: sharedKey });
+                fetchDashboardData();
+            } catch (err) {
+                console.error(err);
+                alert("Connection Error");
+            }
+        }
+
+        window.unlockApp = function() {
+            const key = document.getElementById('access-key-input').value.trim();
+            if (key) {
+                localStorage.setItem('swift_access_key', key);
+                location.reload();
+            }
+        };
+
+        async function fetchDashboardData() {
+            const tbody = document.getElementById('dashboard-body');
+            
+            // 1. Fetch Master Bins (The Skeleton)
+            const { data: bins, error: binError } = await supabase
+                .from('master_bins')
+                .select('bin_id');
+
+            // 2. Fetch ALL Logs (The History)
+            const { data: logs, error: logError } = await supabase
+                .from('activity_logs')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (binError || logError) {
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-red-500">Error fetching data. Check permissions.</td></tr>`;
+                return;
+            }
+
+            // 3. Process Data: Map Latest Log to Each Bin
+            const binMap = new Map();
+
+            // Initialize all master bins with "Empty" state
+            bins.forEach(b => {
+                binMap.set(b.bin_id, {
+                    id: b.bin_id,
+                    status: 'Not at site',
+                    client: '-',
+                    address: '-',
+                    date: '-',
+                    rawDate: 0
+                });
+            });
+
+            // Apply latest logs
+            // Since logs are ordered DESC, the first time we see a bin_id, it's the latest
+            logs.forEach(log => {
+                // Only update if it exists in master list AND we haven't touched it yet
+                // (Note: If log exists for a deleted bin, we ignore it based on requirements to show "Master Bins")
+                if (binMap.has(log.bin_id)) {
+                    const currentEntry = binMap.get(log.bin_id);
+                    // If rawDate is 0, it means we haven't updated this bin with a log yet
+                    if (currentEntry.rawDate === 0) {
+                        
+                        let status = 'Not at site';
+                        let client = '-';
+                        let address = '-';
+                        
+                        // Logic: Deliver = Delivered. PickUp = Not at site.
+                        if (log.activity_type === 'Deliver') {
+                            status = 'Delivered';
+                            client = log.client_name || 'Unknown';
+                            address = log.address || 'Unknown';
+                        } else if (log.activity_type === 'PickUp') {
+                            status = 'Not at site';
+                            // "If not at site, no details" - keeping client/address as '-'
+                        }
+
+                        binMap.set(log.bin_id, {
+                            id: log.bin_id,
+                            status: status,
+                            client: client,
+                            address: address,
+                            date: new Date(log.created_at).toLocaleDateString() + ' ' + new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                            rawDate: new Date(log.created_at).getTime()
+                        });
+                    }
+                }
+            });
+
+            // 4. Sort (Numeric Bin ID)
+            allRows = Array.from(binMap.values()).sort((a, b) => 
+                a.id.localeCompare(b.id, undefined, { numeric: true })
+            );
+
+            updateStats();
+            renderTable(allRows);
+        }
+
+        function renderTable(rows) {
+            const tbody = document.getElementById('dashboard-body');
+            tbody.innerHTML = '';
+
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-gray-400">No bins found in Master List.</td></tr>`;
+                return;
+            }
+
+            rows.forEach(row => {
+                // Styles based on status
+                const isDelivered = row.status === 'Delivered';
+                const statusClass = isDelivered 
+                    ? 'bg-green-100 text-green-700 border-green-200' 
+                    : 'bg-gray-100 text-gray-500 border-gray-200';
+                
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors group";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-black text-dark">#${row.id}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wide border ${statusClass}">
+                            ${row.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 font-medium text-gray-700">${row.client}</td>
+                    <td class="px-6 py-4 text-gray-500 max-w-xs truncate" title="${row.address}">${row.address}</td>
+                    <td class="px-6 py-4 text-gray-400 text-xs font-mono">${row.date}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateStats() {
+            const total = allRows.length;
+            const delivered = allRows.filter(r => r.status === 'Delivered').length;
+            const warehouse = total - delivered;
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-delivered').innerText = delivered;
+            document.getElementById('stat-warehouse').innerText = warehouse;
+        }
+
+        window.filterTable = function() {
+            const query = document.getElementById('table-search').value.toLowerCase();
+            const filtered = allRows.filter(r => 
+                r.id.toLowerCase().includes(query) || 
+                r.client.toLowerCase().includes(query) || 
+                r.address.toLowerCase().includes(query) ||
+                r.status.toLowerCase().includes(query)
+            );
+            renderTable(filtered);
+        };
+
+        init();
+    </script>
+</body>
+</html>
