@@ -118,6 +118,7 @@
                         <tr>
                             <th class="px-6 py-4">Bin #</th>
                             <th class="px-6 py-4">Current Status</th>
+                            <th class="px-6 py-4">Days at Site</th>
                             <th class="px-6 py-4">Client</th>
                             <th class="px-6 py-4">Location</th>
                             <th class="px-6 py-4">Last Updated</th>
@@ -125,7 +126,7 @@
                     </thead>
                     <tbody id="dashboard-body" class="divide-y divide-gray-100">
                         <tr>
-                            <td colspan="5" class="px-6 py-10 text-center text-gray-400">Loading data...</td>
+                            <td colspan="6" class="px-6 py-10 text-center text-gray-400">Loading data...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -179,7 +180,7 @@
                 .order('created_at', { ascending: false });
 
             if (binError || logError) {
-                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-red-500">Error fetching data. Check permissions.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-red-500">Error fetching data. Check permissions.</td></tr>`;
                 return;
             }
 
@@ -191,6 +192,7 @@
                 binMap.set(b.bin_id, {
                     id: b.bin_id,
                     status: 'Not at site',
+                    days: '-',
                     client: '-',
                     address: '-',
                     date: '-',
@@ -201,30 +203,33 @@
             // Apply latest logs
             // Since logs are ordered DESC, the first time we see a bin_id, it's the latest
             logs.forEach(log => {
-                // Only update if it exists in master list AND we haven't touched it yet
-                // (Note: If log exists for a deleted bin, we ignore it based on requirements to show "Master Bins")
                 if (binMap.has(log.bin_id)) {
                     const currentEntry = binMap.get(log.bin_id);
-                    // If rawDate is 0, it means we haven't updated this bin with a log yet
                     if (currentEntry.rawDate === 0) {
                         
                         let status = 'Not at site';
                         let client = '-';
                         let address = '-';
+                        let days = '-';
                         
-                        // Logic: Deliver = Delivered. PickUp = Not at site.
                         if (log.activity_type === 'Deliver') {
                             status = 'Delivered';
                             client = log.client_name || 'Unknown';
                             address = log.address || 'Unknown';
+                            
+                            // Calculate Days at Site
+                            const diffTime = Math.floor((new Date() - new Date(log.created_at)) / (1000 * 60 * 60 * 24));
+                            days = diffTime === 0 ? 'Today' : `${diffTime} day${diffTime === 1 ? '' : 's'}`;
+                            
                         } else if (log.activity_type === 'PickUp') {
                             status = 'Not at site';
-                            // "If not at site, no details" - keeping client/address as '-'
+                            days = '-';
                         }
 
                         binMap.set(log.bin_id, {
                             id: log.bin_id,
                             status: status,
+                            days: days,
                             client: client,
                             address: address,
                             date: new Date(log.created_at).toLocaleDateString() + ' ' + new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
@@ -248,7 +253,7 @@
             tbody.innerHTML = '';
 
             if (rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-gray-400">No bins found in Master List.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-gray-400">No bins found in Master List.</td></tr>`;
                 return;
             }
 
@@ -268,6 +273,7 @@
                             ${row.status}
                         </span>
                     </td>
+                    <td class="px-6 py-4 font-bold text-gray-600">${row.days}</td>
                     <td class="px-6 py-4 font-medium text-gray-700">${row.client}</td>
                     <td class="px-6 py-4 text-gray-500 max-w-xs truncate" title="${row.address}">${row.address}</td>
                     <td class="px-6 py-4 text-gray-400 text-xs font-mono">${row.date}</td>
