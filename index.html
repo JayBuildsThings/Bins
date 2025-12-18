@@ -29,12 +29,13 @@
                     window.scrollTo(0, 0);
                     if(viewId === 'view-log-activity') {
                         updateTimeField();
-                        // Reset dropdowns
                         closeAllDropdowns({target: document.body});
                     } else if(viewId === 'view-bin-locations') {
                         loadBinLocations();
                     } else if(viewId === 'view-contacts') {
                         loadContacts();
+                    } else if(viewId === 'view-requests') {
+                        // Future: loadRequests();
                     }
                 });
             }
@@ -81,7 +82,6 @@
         .view { display: none; opacity: 0; transition: opacity 0.2s ease-in-out; }
         .view.active { opacity: 1; }
         #view-main-menu { display: block; opacity: 1; }
-        /* Smooth scrolling for dropdowns */
         .custom-dropdown::-webkit-scrollbar { width: 4px; }
         .custom-dropdown::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
     </style>
@@ -112,7 +112,7 @@
 
     <!-- ================= VIEW: MAIN MENU ================= -->
     <section id="view-main-menu" class="view active">
-        <div class="flex flex-col h-screen p-6 max-w-md mx-auto relative">
+        <div class="flex flex-col min-h-screen p-6 max-w-md mx-auto relative pb-20">
             <header class="flex flex-col mt-8 mb-8">
                 <h1 class="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">SWIFT<span class="text-primary">BINS</span></h1>
                 <p class="text-lg text-slate-500 dark:text-slate-400 font-medium mt-1">Management Portal</p>
@@ -160,10 +160,25 @@
                         <div class="ml-auto pr-2"><span class="material-symbols-outlined text-4xl text-slate-300 group-active:text-orange-600">arrow_forward_ios</span></div>
                     </div>
                 </button>
+
+                <!-- NEW REQUESTS BUTTON -->
+                <button type="button" onclick="navigateTo('view-requests')" class="group relative w-full overflow-hidden rounded-2xl bg-white dark:bg-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-black/20 transition-all active:scale-[0.98] border-2 border-transparent focus:border-blue-500 active:border-blue-500 cursor-pointer">
+                    <div class="absolute inset-0 bg-blue-500 opacity-0 group-active:opacity-10 transition-opacity"></div>
+                    <div class="flex flex-row items-center h-36 p-4 gap-6">
+                        <div class="flex shrink-0 items-center justify-center w-24 h-24 rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                            <span class="material-symbols-outlined !text-6xl">assignment</span>
+                        </div>
+                        <div class="flex flex-col items-start justify-center text-left max-w-[160px]">
+                            <span class="text-2xl font-extrabold text-slate-900 dark:text-white leading-none mb-1 group-active:text-blue-600">REQUESTS</span>
+                            <span class="text-sm font-medium text-slate-500 dark:text-slate-400 leading-tight">Client service requests</span>
+                        </div>
+                        <div class="ml-auto pr-2"><span class="material-symbols-outlined text-4xl text-slate-300 group-active:text-blue-600">arrow_forward_ios</span></div>
+                    </div>
+                </button>
             </div>
             
             <div class="mt-8 text-center">
-                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.25 • LOGOUT</button>
+                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.26 • LOGOUT</button>
             </div>
         </div>
     </section>
@@ -178,7 +193,7 @@
 
             <div class="flex-1 flex flex-col gap-5">
 
-                <!-- 1. Activity Type (AutoFill Trigger) -->
+                <!-- 1. Activity Type -->
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Activity Type</label>
                     <div class="relative">
@@ -190,7 +205,7 @@
                     </div>
                 </div>
                 
-                <!-- 2. Bin # (AutoFill Trigger) -->
+                <!-- 2. Bin # -->
                 <div class="flex flex-col gap-2 relative z-40">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Bin #</label>
                     <div class="relative">
@@ -279,12 +294,25 @@
         </main>
     </section>
 
+    <!-- PLACEHOLDER FOR REQUESTS -->
+    <section id="view-requests" class="view">
+        <main class="flex flex-col min-h-screen p-4 max-w-md mx-auto bg-background-light dark:bg-background-dark">
+            <div class="flex items-center gap-4 mb-6">
+                <button onclick="navigateTo('view-main-menu')" class="p-2 -ml-2 rounded-full hover:bg-black/5 transition-colors cursor-pointer"><span class="material-symbols-outlined text-3xl text-gray-800 dark:text-white">arrow_back</span></button>
+                <h1 class="font-display font-bold text-2xl text-gray-900 dark:text-white">Requests</h1>
+            </div>
+            <div class="flex flex-col gap-4">
+                 <p class="text-center text-gray-500 mt-10">No requests found.</p>
+            </div>
+        </main>
+    </section>
+
     <script>
         const supabaseUrl = 'https://heuhhpjdcphdcrpwmirl.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhldWhocGpkY3BoZGNycHdtaXJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NzIxMTksImV4cCI6MjA4MTU0ODExOX0.FGaDzZFo26DJvMOo5KshwtKLlCXSxVyz-bGBJkD26dI';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        window.masterBins = []; // Cache for strict validation
+        window.masterBins = []; 
 
         async function initSecurity() {
             const sharedKey = localStorage.getItem('swift_access_key');
@@ -292,17 +320,13 @@
                 document.getElementById('lock-screen').classList.remove('hidden');
                 return;
             }
-            // Unlock the session
             await supabase.rpc('set_session_key', { key: sharedKey });
-            
-            // Prefetch master bins for validation/dropdowns
             fetchMasterBins();
         }
 
         async function fetchMasterBins() {
             const { data } = await supabase.from('master_bins').select('bin_id');
             if(data) {
-                // Numeric Sort for Bins
                 window.masterBins = data.map(b => b.bin_id).sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
             }
         }
@@ -316,71 +340,40 @@
             if(confirm("Logout and lock vault?")) { localStorage.removeItem('swift_access_key'); location.reload(); }
         };
 
-        // --- BIN LOGIC (STRICT) ---
         window.handleBinSearch = function(input) {
             const val = input.value.trim().toLowerCase();
             const listEl = document.getElementById('suggestions-bin');
-            
-            // Close other dropdowns
             document.querySelectorAll('.custom-dropdown').forEach(el => { if(el.id !== 'suggestions-bin') el.classList.add('hidden'); });
 
-            // Filter from local masterBins cache
             const filtered = window.masterBins.filter(b => b.toLowerCase().includes(val));
-            
-            if(filtered.length === 0) {
-                listEl.classList.add('hidden');
-                return;
-            }
+            if(filtered.length === 0) { listEl.classList.add('hidden'); return; }
 
-            // Build HTML
-            listEl.innerHTML = filtered.map(b => `
-                <div class="p-3.5 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer text-lg font-medium border-b border-gray-100 dark:border-white/5" 
-                     onclick="selectBin('${b}')">
-                    Bin #${b}
-                </div>
-            `).join('');
-            
+            listEl.innerHTML = filtered.map(b => `<div class="p-3.5 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer text-lg font-medium border-b border-gray-100 dark:border-white/5" onclick="selectBin('${b}')">Bin #${b}</div>`).join('');
             listEl.classList.remove('hidden');
         };
 
         window.selectBin = function(binId) {
             document.getElementById('log-bin-id').value = binId;
             document.getElementById('suggestions-bin').classList.add('hidden');
-            autoFillBinDetails(); // Trigger autofill on selection
+            autoFillBinDetails(); 
         };
 
-        // --- AUTOFILL ON PICKUP ---
         window.autoFillBinDetails = async function() {
             const type = document.getElementById('log-type').value;
             const binId = document.getElementById('log-bin-id').value.trim();
-
-            // Only run if PickUp is selected and we have a bin ID
             if (type !== 'PickUp' || !binId) return;
 
             try {
-                // Find the last known location for this bin
-                const { data, error } = await supabase
-                    .from('activity_logs')
-                    .select('*')
-                    .eq('bin_id', binId)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-
+                const { data } = await supabase.from('activity_logs').select('*').eq('bin_id', binId).order('created_at', { ascending: false }).limit(1).maybeSingle();
                 if (data) {
-                    // Populate fields
                     if (data.client_name) document.getElementById('log-client-name').value = data.client_name;
                     if (data.address) document.getElementById('log-address').value = data.address;
                     if (data.phone_number) document.getElementById('log-phone').value = data.phone_number;
-                    
                     window.showToast("Bin details autofilled");
                 }
-            } catch (e) {
-                console.error("Autofill error:", e);
-            }
+            } catch (e) { console.error("Autofill error:", e); }
         };
 
-        // --- SUBMISSION ---
         window.submitLog = async function() {
             const btn = document.getElementById('submit-btn');
             const sharedKey = localStorage.getItem('swift_access_key');
@@ -389,11 +382,7 @@
             
             if(!binId) return window.showToast("Please select a Bin", true);
             if(!address) return window.showToast("Please enter an Address", true);
-
-            // STRICT VALIDATION
-            if (!window.masterBins.includes(binId)) {
-                return window.showToast(`Error: Bin #${binId} does not exist in Master List`, true);
-            }
+            if (!window.masterBins.includes(binId)) return window.showToast(`Error: Bin #${binId} does not exist in Master List`, true);
 
             btn.disabled = true;
             document.getElementById('submit-btn-text').innerText = "Processing...";
@@ -417,7 +406,6 @@
             }
         };
 
-        // --- OTHER LOGIC (Contacts/Locs/Autofill) ---
         window.loadBinLocations = async function() {
             const container = document.getElementById('bin-list-container');
             const { data, error } = await supabase.from('activity_logs').select('*').order('created_at', { ascending: false });
@@ -426,18 +414,12 @@
             const uniqueBins = new Map();
             data.forEach(log => { if(log.bin_id && !uniqueBins.has(log.bin_id)) uniqueBins.set(log.bin_id, log); });
             
-            // Convert to array for custom sorting
             let binArray = Array.from(uniqueBins.values());
-            
-            // Sort: Delivered first (Newest->Oldest), then Others (Newest->Oldest)
             binArray.sort((a, b) => {
                 const aIsDelivered = a.activity_type === 'Deliver';
                 const bIsDelivered = b.activity_type === 'Deliver';
-                
                 if (aIsDelivered && !bIsDelivered) return -1;
                 if (!aIsDelivered && bIsDelivered) return 1;
-                
-                // Both same status group, sort by date descending
                 return new Date(b.created_at) - new Date(a.created_at);
             });
 
@@ -445,15 +427,10 @@
             binArray.forEach(bin => {
                 const isPickup = bin.activity_type === 'PickUp';
                 const isDeliver = bin.activity_type === 'Deliver';
-                let displayText = bin.activity_type || 'Unknown';
-                if (isPickup) displayText = 'Not on site';
-                else if (isDeliver) displayText = 'Delivered';
+                let displayText = isPickup ? 'Not on site' : (isDeliver ? 'Delivered' : 'Unknown');
 
-                // Calculate Days
                 const daysDiff = Math.floor((new Date() - new Date(bin.created_at)) / (1000 * 60 * 60 * 24));
                 const daysText = daysDiff === 0 ? 'Today' : `${daysDiff} day${daysDiff === 1 ? '' : 's'}`;
-
-                // Day Counter HTML (Only green for delivered, grey for pickup)
                 const daysHtml = isDeliver 
                     ? `<div class="text-[10px] text-green-700 font-medium mt-1 text-right">${daysText}</div>` 
                     : `<div class="text-[10px] text-gray-400 font-medium mt-1 text-right">${daysText} ago</div>`;
@@ -508,22 +485,17 @@
                 </div>`).join('');
         }
 
-        // --- AUTOFILL ---
         window.handleAutoFill = async function(input, dbColumn) {
             const val = input.value.trim();
             const listId = `suggestions-${dbColumn.replace('_', '-')}`;
             const listEl = document.getElementById(listId);
             
-            // Fix: Clean other fields if user clears the Client Name
             if(dbColumn === 'client_name' && val === '') {
                 document.getElementById('log-address').value = '';
                 document.getElementById('log-phone').value = '';
             }
 
-            // Hide if empty
             if(val.length < 1) { listEl.classList.add('hidden'); return; }
-            
-            // Close others
             document.querySelectorAll('.custom-dropdown').forEach(d => { if(d.id !== listId) d.classList.add('hidden'); });
 
             const { data } = await supabase.from('activity_logs').select('*').ilike(dbColumn, `%${val}%`).limit(5);
@@ -539,17 +511,9 @@
             document.getElementById(`log-${col.replace('_', '-')}`).value = val;
             document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.add('hidden'));
             
-            // Fetch most recent log to get updated details (ordered by date)
-            const { data } = await supabase
-                .from('activity_logs')
-                .select('*')
-                .eq(col, val)
-                .order('created_at', { ascending: false })
-                .limit(1);
+            const { data } = await supabase.from('activity_logs').select('*').eq(col, val).order('created_at', { ascending: false }).limit(1);
 
             if(data[0]) {
-                // FORCE OVERWRITE (Removed previous 'if empty' checks)
-                // This ensures if you switch from 'John' to 'Sarah', John's data is replaced.
                 if(data[0].bin_id) document.getElementById('log-bin-id').value = data[0].bin_id;
                 if(data[0].client_name) document.getElementById('log-client-name').value = data[0].client_name;
                 if(data[0].address) document.getElementById('log-address').value = data[0].address;
