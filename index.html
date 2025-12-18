@@ -163,7 +163,7 @@
             </div>
             
             <div class="mt-8 text-center">
-                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.21 • LOGOUT</button>
+                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.22 • LOGOUT</button>
             </div>
         </div>
     </section>
@@ -177,8 +177,20 @@
             </div>
 
             <div class="flex-1 flex flex-col gap-5">
+
+                <!-- 1. Activity Type (MOVED TO TOP) -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Activity Type</label>
+                    <div class="relative">
+                        <select id="log-type" class="w-full h-14 pl-4 pr-12 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm appearance-none cursor-pointer">
+                            <option value="Deliver">Deliver</option>
+                            <option value="PickUp">PickUp</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500"><span class="material-symbols-outlined text-2xl">expand_more</span></div>
+                    </div>
+                </div>
                 
-                <!-- 1. Bin # (UPDATED: Smart Dropdown) -->
+                <!-- 2. Bin # -->
                 <div class="flex flex-col gap-2 relative z-40">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Bin #</label>
                     <div class="relative">
@@ -194,7 +206,7 @@
                     </div>
                 </div>
 
-                <!-- 2. Client Name -->
+                <!-- 3. Client Name -->
                 <div class="flex flex-col gap-2 relative z-30">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Client Name</label>
                     <div class="relative">
@@ -204,7 +216,7 @@
                     </div>
                 </div>
 
-                <!-- 3. Address -->
+                <!-- 4. Address -->
                 <div class="flex flex-col gap-2 relative z-20">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Address</label>
                     <div class="relative">
@@ -214,25 +226,13 @@
                     </div>
                 </div>
 
-                <!-- 4. Phone Number -->
+                <!-- 5. Phone Number -->
                 <div class="flex flex-col gap-2 relative z-10">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Phone Number</label>
                     <div class="relative">
                         <input type="tel" id="log-phone" placeholder="(555) 000-0000" autocomplete="off" class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm" oninput="handleAutoFill(this, 'phone_number')" onfocus="handleAutoFill(this, 'phone_number')">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">phone</span>
                         <div id="suggestions-phone-number" class="custom-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-surface-dark shadow-xl rounded-xl max-h-60 overflow-y-auto hidden border border-gray-100 dark:border-white/5"></div>
-                    </div>
-                </div>
-
-                <!-- 5. Activity Type -->
-                <div class="flex flex-col gap-2">
-                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Activity Type</label>
-                    <div class="relative">
-                        <select id="log-type" class="w-full h-14 pl-4 pr-12 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm appearance-none cursor-pointer">
-                            <option value="Deliver">Deliver</option>
-                            <option value="PickUp">PickUp</option>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500"><span class="material-symbols-outlined text-2xl">expand_more</span></div>
                     </div>
                 </div>
 
