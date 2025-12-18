@@ -402,8 +402,7 @@
         };
 
         window.removeAddress = function(index) {
-            // If it's new, just splice. If it exists in DB, mark for deletion logic (simplified here to just UI removal for now, complex sync below)
-            // Ideally, we mark it 'isDeleted'
+            // Strictly mark as deleted. SaveClient will handle the DB delete.
             currentAddresses[index].isDeleted = true;
             renderAddressList();
         };
@@ -434,7 +433,7 @@
             const newAddrs = currentAddresses.filter(a => a.isNew && !a.isDeleted).map(a => ({ client_id: clientId, address: a.address, access_key: key }));
             if(newAddrs.length > 0) await supabase.from('client_addresses').insert(newAddrs);
             
-            // B. Delete Removed (Existing IDs marked deleted)
+            // B. Delete Removed (Crucial step for your request)
             const idsToDelete = currentAddresses.filter(a => a.isDeleted && a.id).map(a => a.id);
             if(idsToDelete.length > 0) await supabase.from('client_addresses').delete().in('id', idsToDelete);
 
