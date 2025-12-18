@@ -96,7 +96,7 @@
                 <div class="relative">
                     <div class="absolute inset-0 border-t border-gray-100"></div>
                     <div id="bin-list" class="h-[400px] overflow-y-auto pr-2 space-y-2 pt-4">
-                        <p class="text-center text-gray-400 mt-10">Loading master data...</p>
+                        <p class="text-center text-gray-400 mt-10">Connecting to database...</p>
                     </div>
                 </div>
             </section>
@@ -105,15 +105,20 @@
     </div>
 
     <script>
-        // --- SUPABASE CONFIG ---
+        // --- SUPABASE CONFIG (Corrected Key ending in 119) ---
         const supabaseUrl = 'https://heuhhpjdcphdcrpwmirl.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhldWhocGpkY3BoZGNycHdtaXJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NzIxMTksImV4cCI6MjA4MTU0ODExOX0.FGaDzZFo26DJvMOo5KshwtKLlCXSxVyz-bGBJkD26dI';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        let supabase;
 
-        // --- INIT ---
         window.onload = function() {
-            fetchPasscode();
-            fetchBins();
+            try {
+                supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                fetchPasscode();
+                fetchBins();
+            } catch (err) {
+                alert("Supabase Initialization Failed: " + err.message);
+            }
         };
 
         // --- PASSCODE FUNCTIONS ---
@@ -124,7 +129,10 @@
                 .eq('setting_key', 'submission_passcode')
                 .single();
             
-            if (data) {
+            if (error) {
+                console.error("Passcode Fetch Error:", error);
+                document.getElementById('current-passcode').value = "Error loading";
+            } else if (data) {
                 document.getElementById('current-passcode').value = data.setting_value;
             }
         }
@@ -132,7 +140,7 @@
         async function updatePasscode() {
             const newVal = document.getElementById('new-passcode').value;
             if (newVal.length < 4) {
-                alert("Passcode must be at least 4 characters.");
+                alert("Passcode must be 4 digits.");
                 return;
             }
 
@@ -140,8 +148,9 @@
                 .from('app_settings')
                 .upsert({ setting_key: 'submission_passcode', setting_value: newVal });
 
-            if (error) alert("Error: " + error.message);
-            else {
+            if (error) {
+                alert("Update Failed: " + error.message);
+            } else {
                 alert("Passcode updated!");
                 document.getElementById('new-passcode').value = "";
                 fetchPasscode();
@@ -150,19 +159,29 @@
 
         // --- BIN FUNCTIONS ---
         async function fetchBins() {
+            const listContainer = document.getElementById('bin-list');
+            
             const { data, error } = await supabase
                 .from('master_bins')
-                .select('*')
-                .order('bin_id', { ascending: true }); // String sort (1, 10, 2...)
+                .select('*');
             
+            if (error) {
+                alert("Bins Fetch Error: " + error.message + "\n\nDid you run the SQL code to create the 'master_bins' table?");
+                listContainer.innerHTML = `<p class="text-center text-red-500 mt-10">Error: ${error.message}</p>`;
+                return;
+            }
+
             if (data) {
-                // Natural sort logic for numbers (1, 2, 10) instead of (1, 10, 2)
+                // Natural sort (1, 2, 10 instead of 1, 10, 2)
                 data.sort((a, b) => a.bin_id.localeCompare(b.bin_id, undefined, { numeric: true }));
                 
                 document.getElementById('bin-count').innerText = `${data.length} Bins`;
-                const list = document.getElementById('bin-list');
-                list.innerHTML = "";
+                listContainer.innerHTML = "";
                 
+                if (data.length === 0) {
+                    listContainer.innerHTML = `<p class="text-center text-gray-400 mt-10">No bins found. Add one above.</p>`;
+                }
+
                 data.forEach(bin => {
                     const el = document.createElement('div');
                     el.className = "flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg hover:border-blue-200 transition-colors group";
@@ -175,7 +194,7 @@
                             <span class="material-symbols-outlined">cancel</span>
                         </button>
                     `;
-                    list.appendChild(el);
+                    listContainer.appendChild(el);
                 });
             }
         }
@@ -187,7 +206,7 @@
             const { error } = await supabase.from('master_bins').insert([{ bin_id: id }]);
             
             if (error) {
-                alert("Error adding bin (Duplicate ID?): " + error.message);
+                alert("Error adding bin: " + error.message);
             } else {
                 document.getElementById('new-bin-id').value = "";
                 fetchBins();
@@ -198,7 +217,8 @@
             if(!confirm(`Delete Bin #${id}?`)) return;
             
             const { error } = await supabase.from('master_bins').delete().eq('bin_id', id);
-            if (!error) fetchBins();
+            if (error) alert("Delete failed: " + error.message);
+            else fetchBins();
         }
     </script>
 </body>
