@@ -178,7 +178,7 @@
             </div>
             
             <div class="mt-8 text-center">
-                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.34 • LOGOUT</button>
+                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.35 • LOGOUT</button>
             </div>
         </div>
     </section>
@@ -225,9 +225,8 @@
                 <div class="flex flex-col gap-2 relative z-30">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Client Name</label>
                     <div class="relative">
-                        <input type="text" id="log-client-name" placeholder="Name..." autocomplete="off" class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm" oninput="handleClientSearch(this)" onfocus="handleClientSearch(this)">
+                        <input type="text" id="log-client-name" placeholder="Name..." autocomplete="off" class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm" oninput="handleAutoFill(this, 'client_name')" onfocus="handleAutoFill(this, 'client_name')">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">person</span>
-                        <!-- Clients Dropdown -->
                         <div id="suggestions-client-name" class="custom-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-surface-dark shadow-xl rounded-xl max-h-60 overflow-y-auto hidden border border-gray-100 dark:border-white/5"></div>
                     </div>
                 </div>
@@ -236,9 +235,8 @@
                 <div class="flex flex-col gap-2 relative z-20">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Address</label>
                     <div class="relative">
-                        <input type="text" id="log-address" placeholder="Enter address..." autocomplete="off" class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm" onfocus="handleAddressFocus()">
+                        <input type="text" id="log-address" placeholder="Enter address..." autocomplete="off" class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm" oninput="handleAutoFill(this, 'address')" onfocus="handleAutoFill(this, 'address')">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">location_on</span>
-                        <!-- Linked Addresses Dropdown -->
                         <div id="suggestions-address" class="custom-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-surface-dark shadow-xl rounded-xl max-h-60 overflow-y-auto hidden border border-gray-100 dark:border-white/5"></div>
                     </div>
                 </div>
@@ -247,8 +245,9 @@
                 <div class="flex flex-col gap-2 relative z-10">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Phone Number</label>
                     <div class="relative">
-                        <input type="tel" id="log-phone" placeholder="(555) 000-0000" autocomplete="off" class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm">
+                        <input type="tel" id="log-phone" placeholder="(555) 000-0000" autocomplete="off" class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm" oninput="handleAutoFill(this, 'phone_number')" onfocus="handleAutoFill(this, 'phone_number')">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">phone</span>
+                        <div id="suggestions-phone-number" class="custom-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-surface-dark shadow-xl rounded-xl max-h-60 overflow-y-auto hidden border border-gray-100 dark:border-white/5"></div>
                     </div>
                 </div>
 
@@ -315,7 +314,6 @@
 
         window.masterBins = []; 
         window.requestsData = []; 
-        window.selectedClientAddresses = []; // Stores addresses for the selected client
 
         async function initSecurity() {
             const sharedKey = localStorage.getItem('swift_access_key');
@@ -343,7 +341,6 @@
             if(confirm("Logout and lock vault?")) { localStorage.removeItem('swift_access_key'); location.reload(); }
         };
 
-        // --- BIN SEARCH ---
         window.handleBinSearch = function(input) {
             const val = input.value.trim().toLowerCase();
             const listEl = document.getElementById('suggestions-bin');
@@ -367,7 +364,6 @@
             const binId = document.getElementById('log-bin-id').value.trim();
             if (type !== 'PickUp' || !binId) return;
 
-            // Prioritize recent activity log for Pickup details
             try {
                 const { data } = await supabase.from('activity_logs').select('*').eq('bin_id', binId).order('created_at', { ascending: false }).limit(1).maybeSingle();
                 if (data) {
@@ -379,83 +375,12 @@
             } catch (e) { console.error("Autofill error:", e); }
         };
 
-        // --- CLIENT SEARCH & AUTOFILL ---
-        window.handleClientSearch = async function(input) {
-            const val = input.value.trim();
-            const listEl = document.getElementById('suggestions-client-name');
-            
-            if (val.length < 1) { listEl.classList.add('hidden'); return; }
-
-            // 1. Search in Clients table first
-            const { data: clients } = await supabase.from('clients').select('*, client_addresses(*)').ilike('name', `%${val}%`).limit(5);
-
-            // 2. Fallback to Activity Logs if no clients found (legacy support)
-            let combinedResults = [];
-            if (clients && clients.length > 0) {
-                combinedResults = clients.map(c => ({ name: c.name, phone: c.phone, addresses: c.client_addresses.map(a => a.address) }));
-            } else {
-                const { data: logs } = await supabase.from('activity_logs').select('client_name, address, phone_number').ilike('client_name', `%${val}%`).limit(5);
-                // Deduplicate logs
-                 const unique = new Map();
-                 logs.forEach(l => {
-                     if(!unique.has(l.client_name)) unique.set(l.client_name, { name: l.client_name, phone: l.phone_number, addresses: [l.address] });
-                 });
-                 combinedResults = Array.from(unique.values());
-            }
-
-            if (combinedResults.length === 0) { listEl.classList.add('hidden'); return; }
-
-            listEl.innerHTML = combinedResults.map(c => 
-                `<div class="p-3.5 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer text-sm border-b border-gray-100 dark:border-white/5" onclick='selectClient(${JSON.stringify(c).replace(/'/g, "&#39;")})'>${c.name}</div>`
-            ).join('');
-            listEl.classList.remove('hidden');
-        };
-
-        window.selectClient = function(client) {
-            document.getElementById('log-client-name').value = client.name;
-            document.getElementById('log-phone').value = client.phone || "";
-            document.getElementById('suggestions-client-name').classList.add('hidden');
-
-            // Handle Addresses
-            window.selectedClientAddresses = client.addresses || [];
-            
-            if (window.selectedClientAddresses.length === 1) {
-                // Only one address -> Autofill
-                document.getElementById('log-address').value = window.selectedClientAddresses[0];
-            } else if (window.selectedClientAddresses.length > 1) {
-                // Multiple addresses -> Clear field and show dropdown suggestion
-                document.getElementById('log-address').value = "";
-                document.getElementById('log-address').placeholder = "Select an address...";
-                document.getElementById('log-address').focus(); // Trigger handleAddressFocus
-            }
-        };
-
-        window.handleAddressFocus = function() {
-            // If we have stored addresses for the selected client, show them
-            if (window.selectedClientAddresses && window.selectedClientAddresses.length > 1) {
-                const listEl = document.getElementById('suggestions-address');
-                listEl.innerHTML = window.selectedClientAddresses.map(addr => 
-                    `<div class="p-3.5 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer text-sm border-b border-gray-100 dark:border-white/5" onclick="selectAddress('${addr}')">${addr}</div>`
-                ).join('');
-                listEl.classList.remove('hidden');
-            }
-        };
-
-        window.selectAddress = function(addr) {
-            document.getElementById('log-address').value = addr;
-            document.getElementById('suggestions-address').classList.add('hidden');
-        };
-
-        // --- SUBMIT LOG (UPDATED FOR CLIENT SYNC) ---
         window.submitLog = async function() {
             const btn = document.getElementById('submit-btn');
             const sharedKey = localStorage.getItem('swift_access_key');
             const binId = document.getElementById('log-bin-id').value.trim();
-            const clientName = document.getElementById('log-client-name').value.trim();
             const address = document.getElementById('log-address').value.trim();
-            const phone = document.getElementById('log-phone').value.trim();
-            const activityType = document.getElementById('log-type').value;
-
+            
             if(!binId) return window.showToast("Please select a Bin", true);
             if(!address) return window.showToast("Please enter an Address", true);
             if (!window.masterBins.includes(binId)) return window.showToast(`Error: Bin #${binId} does not exist in Master List`, true);
@@ -464,53 +389,15 @@
             document.getElementById('submit-btn-text').innerText = "Processing...";
 
             try {
-                // 1. Log Activity to History
-                const { error: logError } = await supabase.from('activity_logs').insert([{
+                const { error } = await supabase.from('activity_logs').insert([{
                     bin_id: binId,
-                    client_name: clientName,
+                    client_name: document.getElementById('log-client-name').value,
                     address: address,
-                    phone_number: phone,
-                    activity_type: activityType,
+                    phone_number: document.getElementById('log-phone').value,
+                    activity_type: document.getElementById('log-type').value,
                     access_key: sharedKey
                 }]);
-                if (logError) throw logError;
-
-                // 2. Sync Client & Address to Database (Auto-populate)
-                if (clientName) {
-                    // Check if Client Exists
-                    let { data: client } = await supabase.from('clients').select('id').ilike('name', clientName).maybeSingle();
-                    let clientId;
-
-                    if (!client) {
-                        // Create New Client
-                        const { data: newClient, error: createError } = await supabase.from('clients')
-                            .insert([{ name: clientName, phone: phone, access_key: sharedKey }])
-                            .select().single();
-                        
-                        if (!createError) clientId = newClient.id;
-                    } else {
-                        clientId = client.id;
-                        // Optional: Update phone if different? (Skipping for now to avoid overwrite issues)
-                    }
-
-                    // Check/Add Address
-                    if (clientId && address) {
-                        const { data: existingAddr } = await supabase.from('client_addresses')
-                            .select('id')
-                            .eq('client_id', clientId)
-                            .ilike('address', address)
-                            .maybeSingle();
-                        
-                        if (!existingAddr) {
-                            await supabase.from('client_addresses').insert([{ 
-                                client_id: clientId, 
-                                address: address, 
-                                access_key: sharedKey 
-                            }]);
-                        }
-                    }
-                }
-
+                if (error) throw error;
                 window.showToast("Activity Logged!");
                 setTimeout(() => { location.reload(); }, 1000);
             } catch (err) {
@@ -518,26 +405,6 @@
                 btn.disabled = false;
                 document.getElementById('submit-btn-text').innerText = "SUBMIT LOG";
             }
-        };
-
-        // --- CONVERT REQUEST TO ACTIVITY ---
-        window.convertRequestToActivity = function(index) {
-            const req = window.requestsData[index];
-            if (!req) return;
-
-            let activityType = 'Deliver'; 
-            if (req.request_type && req.request_type.toLowerCase().includes('pickup')) {
-                activityType = 'PickUp';
-            }
-
-            document.getElementById('log-type').value = activityType;
-            document.getElementById('log-client-name').value = req.client_name || '';
-            document.getElementById('log-address').value = req.address || '';
-            document.getElementById('log-phone').value = req.phone || '';
-            document.getElementById('log-bin-id').value = ''; 
-
-            navigateTo('view-log-activity');
-            window.showToast("Details autofilled from request");
         };
 
         window.loadBinLocations = async function() {
@@ -593,91 +460,56 @@
             });
         };
 
-        // --- UPDATED CONTACT LOADING: USES CLIENTS TABLE ---
         window.loadContacts = async function() {
             const container = document.getElementById('contact-list-container');
-            container.innerHTML = `<p class="text-center text-gray-500 mt-10 animate-pulse">Loading contacts...</p>`;
-
-            // Fetch from clients table (with addresses)
-            const { data: clients, error } = await supabase
-                .from('clients')
-                .select('*, client_addresses(*)')
-                .order('name');
-
-            if (error || !clients) { 
-                // Fallback to logs if empty/error (legacy)
-                loadContactsFromLogs(container);
-                return;
-            }
-            
-            if(clients.length === 0) {
-                 container.innerHTML = `<p class="text-center text-gray-500 mt-10">No clients found. Add them in Dashboard.</p>`;
-                 return;
-            }
-
-            // Render
-            container.innerHTML = clients.map(c => {
-                // Address List HTML
-                const addressHtml = c.client_addresses && c.client_addresses.length > 0 
-                    ? c.client_addresses.map(a => `
-                        <div class="flex justify-between items-center bg-gray-50 dark:bg-white/5 p-2 rounded mb-1">
-                            <span class="text-sm text-gray-600 dark:text-gray-400 truncate flex-1 flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[16px]">location_on</span>
-                                ${a.address}
-                            </span>
-                            <button onclick="openMaps('${a.address}')" class="text-blue-600 dark:text-blue-400 font-bold text-xs bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/50">Map</button>
-                        </div>
-                    `).join('')
-                    : '<p class="text-xs text-gray-400 italic pl-1">No linked addresses</p>';
-
-                return `
-                    <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm mb-4 border border-gray-100 dark:border-white/5">
-                        <div class="flex items-center gap-4 mb-3">
-                            <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0">
-                                ${c.name ? c.name[0].toUpperCase() : '?'}
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-900 dark:text-white">${c.name}</h3>
-                                <a href="tel:${c.phone}" class="text-sm text-gray-500 flex items-center gap-1 hover:text-green-600"><span class="material-symbols-outlined text-sm">phone</span>${c.phone || 'No phone'}</a>
-                            </div>
-                        </div>
-                        
-                        <div class="space-y-1 mb-3">
-                            ${addressHtml}
-                        </div>
-
-                        ${c.phone ? `
-                        <a href="tel:${c.phone}" class="w-full h-10 bg-green-100 text-green-700 rounded-lg font-bold flex items-center justify-center gap-2 text-sm hover:bg-green-200 transition-colors">
-                            <span class="material-symbols-outlined text-lg">call</span> Call
-                        </a>` : ''}
-                    </div>
-                `;
-            }).join('');
+            const { data, error } = await supabase.from('activity_logs').select('*').order('created_at', { ascending: false });
+            if (error) return;
+            const uniqueClients = new Map();
+            data.forEach(log => { if(log.client_name && !uniqueClients.has(log.client_name)) uniqueClients.set(log.client_name, log); });
+            window.allContacts = Array.from(uniqueClients.values()).sort((a,b) => a.client_name.localeCompare(b.client_name));
+            renderContacts(window.allContacts);
         };
 
-        // Fallback function if client table is empty
-        async function loadContactsFromLogs(container) {
-             const { data } = await supabase.from('activity_logs').select('*').order('created_at', { ascending: false });
-             if(!data) return;
-             const uniqueClients = new Map();
-             data.forEach(log => { if(log.client_name && !uniqueClients.has(log.client_name)) uniqueClients.set(log.client_name, log); });
-             const contacts = Array.from(uniqueClients.values()).sort((a,b) => a.client_name.localeCompare(b.client_name));
-             
-             container.innerHTML = contacts.map(c => `
-                <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm mb-4 border border-gray-100 dark:border-white/5 opacity-75">
-                    <p class="text-xs text-red-400 mb-2 font-bold uppercase">Legacy Contact (Not in DB)</p>
+        function renderContacts(contacts) {
+            const container = document.getElementById('contact-list-container');
+            container.innerHTML = contacts.map(c => `
+                <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm mb-4 border border-gray-100 dark:border-white/5">
                     <div class="flex items-start gap-4">
-                        <div class="h-12 w-12 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-xl font-bold shrink-0">${c.client_name[0]}</div>
+                        <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0">${c.client_name[0]}</div>
                         <div class="flex-1">
                             <h3 class="text-lg font-bold mb-1">${c.client_name}</h3>
                             <p class="text-sm text-gray-500 mb-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">location_on</span>${c.address}</p>
                             <p class="text-sm text-gray-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">phone</span>${c.phone_number}</p>
                         </div>
                     </div>
+                    <div class="grid grid-cols-2 gap-2 mt-4"><a href="tel:${c.phone_number}" class="bg-green-100 text-green-700 h-10 rounded-md font-bold flex items-center justify-center gap-2 text-sm"><span class="material-symbols-outlined text-xl">call</span>Call</a><button onclick="openMaps('${c.address}')" class="bg-primary/10 text-primary h-10 rounded-md font-bold flex items-center justify-center gap-2 text-sm"><span class="material-symbols-outlined text-xl">directions</span>Directions</button></div>
                 </div>`).join('');
         }
-        
-         window.loadRequests = async function() {
+
+        // --- CONVERT REQUEST TO ACTIVITY ---
+        window.convertRequestToActivity = function(index) {
+            const req = window.requestsData[index];
+            if (!req) return;
+
+            // 1. Determine Activity Type
+            let activityType = 'Deliver'; // Default
+            if (req.request_type && req.request_type.toLowerCase().includes('pickup')) {
+                activityType = 'PickUp';
+            }
+
+            // 2. Populate Log Activity Fields
+            document.getElementById('log-type').value = activityType;
+            document.getElementById('log-client-name').value = req.client_name || '';
+            document.getElementById('log-address').value = req.address || '';
+            document.getElementById('log-phone').value = req.phone || '';
+            document.getElementById('log-bin-id').value = ''; // Reset bin ID as it needs to be selected manually
+
+            // 3. Navigate
+            navigateTo('view-log-activity');
+            window.showToast("Details autofilled from request");
+        };
+
+        window.loadRequests = async function() {
             const container = document.getElementById('requests-list-container');
             container.innerHTML = `<p class="text-center text-gray-500 mt-10 animate-pulse">Loading requests...</p>`;
             
@@ -777,6 +609,42 @@
             } catch(e) {
                 console.error(e);
                 container.innerHTML = `<p class="text-center text-red-500 mt-10">Error loading requests.</p>`;
+            }
+        };
+
+        window.handleAutoFill = async function(input, dbColumn) {
+            const val = input.value.trim();
+            const listId = `suggestions-${dbColumn.replace('_', '-')}`;
+            const listEl = document.getElementById(listId);
+            
+            if(dbColumn === 'client_name' && val === '') {
+                document.getElementById('log-address').value = '';
+                document.getElementById('log-phone').value = '';
+            }
+
+            if(val.length < 1) { listEl.classList.add('hidden'); return; }
+            document.querySelectorAll('.custom-dropdown').forEach(d => { if(d.id !== listId) d.classList.add('hidden'); });
+
+            const { data } = await supabase.from('activity_logs').select('*').ilike(dbColumn, `%${val}%`).limit(5);
+            if(!data || data.length === 0) return;
+            
+            listEl.innerHTML = [...new Set(data.map(d => d[dbColumn]))].map(v => 
+                `<div class="p-3.5 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer text-sm border-b border-gray-100 dark:border-white/5" onclick="selectSug('${v}', '${dbColumn}')">${v}</div>`
+            ).join('');
+            listEl.classList.remove('hidden');
+        };
+
+        window.selectSug = async function(val, col) {
+            document.getElementById(`log-${col.replace('_', '-')}`).value = val;
+            document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.add('hidden'));
+            
+            const { data } = await supabase.from('activity_logs').select('*').eq(col, val).order('created_at', { ascending: false }).limit(1);
+
+            if(data[0]) {
+                if(data[0].bin_id) document.getElementById('log-bin-id').value = data[0].bin_id;
+                if(data[0].client_name) document.getElementById('log-client-name').value = data[0].client_name;
+                if(data[0].address) document.getElementById('log-address').value = data[0].address;
+                if(data[0].phone_number) document.getElementById('log-phone').value = data[0].phone_number;
             }
         };
 
