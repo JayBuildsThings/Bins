@@ -35,7 +35,7 @@
                     } else if(viewId === 'view-contacts') {
                         loadContacts();
                     } else if(viewId === 'view-requests') {
-                        // Future: loadRequests();
+                        loadRequests();
                     }
                 });
             }
@@ -161,7 +161,7 @@
                     </div>
                 </button>
 
-                <!-- NEW REQUESTS BUTTON -->
+                <!-- REQUESTS BUTTON -->
                 <button type="button" onclick="navigateTo('view-requests')" class="group relative w-full overflow-hidden rounded-2xl bg-white dark:bg-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-black/20 transition-all active:scale-[0.98] border-2 border-transparent focus:border-blue-500 active:border-blue-500 cursor-pointer">
                     <div class="absolute inset-0 bg-blue-500 opacity-0 group-active:opacity-10 transition-opacity"></div>
                     <div class="flex flex-row items-center h-36 p-4 gap-6">
@@ -178,7 +178,7 @@
             </div>
             
             <div class="mt-8 text-center">
-                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.26 • LOGOUT</button>
+                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.28 • LOGOUT</button>
             </div>
         </div>
     </section>
@@ -294,15 +294,15 @@
         </main>
     </section>
 
-    <!-- PLACEHOLDER FOR REQUESTS -->
+    <!-- REQUESTS -->
     <section id="view-requests" class="view">
         <main class="flex flex-col min-h-screen p-4 max-w-md mx-auto bg-background-light dark:bg-background-dark">
             <div class="flex items-center gap-4 mb-6">
                 <button onclick="navigateTo('view-main-menu')" class="p-2 -ml-2 rounded-full hover:bg-black/5 transition-colors cursor-pointer"><span class="material-symbols-outlined text-3xl text-gray-800 dark:text-white">arrow_back</span></button>
                 <h1 class="font-display font-bold text-2xl text-gray-900 dark:text-white">Requests</h1>
             </div>
-            <div class="flex flex-col gap-4">
-                 <p class="text-center text-gray-500 mt-10">No requests found.</p>
+            <div id="requests-list-container" class="flex flex-col gap-4 pb-20">
+                 <p class="text-center text-gray-500 mt-10 animate-pulse">Loading requests...</p>
             </div>
         </main>
     </section>
@@ -484,6 +484,92 @@
                     <div class="grid grid-cols-2 gap-2 mt-4"><a href="tel:${c.phone_number}" class="bg-green-100 text-green-700 h-10 rounded-md font-bold flex items-center justify-center gap-2 text-sm"><span class="material-symbols-outlined text-xl">call</span>Call</a><button onclick="openMaps('${c.address}')" class="bg-primary/10 text-primary h-10 rounded-md font-bold flex items-center justify-center gap-2 text-sm"><span class="material-symbols-outlined text-xl">directions</span>Directions</button></div>
                 </div>`).join('');
         }
+
+        window.loadRequests = async function() {
+            const container = document.getElementById('requests-list-container');
+            container.innerHTML = `<p class="text-center text-gray-500 mt-10 animate-pulse">Loading requests...</p>`;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('service_requests')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                if (!data || data.length === 0) {
+                    container.innerHTML = `<p class="text-center text-gray-500 mt-10">No pending requests.</p>`;
+                    return;
+                }
+
+                container.innerHTML = data.map(req => {
+                    const isPickup = req.request_type === 'Pickup';
+                    const icon = isPickup ? 'local_shipping' : 'delete';
+                    const color = isPickup ? 'text-green-600 bg-green-50' : 'text-blue-600 bg-blue-50';
+                    const dateStr = new Date(req.created_at).toLocaleDateString();
+
+                    // --- PARSE DATE FROM NOTES ---
+                    let displayNotes = req.notes || '';
+                    let dateBadgeHtml = '';
+                    
+                    // Regex looks for "NEEDED ON: YYYY-MM-DD" or "PICKUP ON: YYYY-MM-DD"
+                    const dateMatch = displayNotes.match(/(NEEDED ON|PICKUP ON):\s*(\d{4}-\d{2}-\d{2})/);
+                    
+                    if (dateMatch) {
+                        const dateVal = dateMatch[2]; // e.g. 2024-12-05
+                        displayNotes = displayNotes.replace(dateMatch[0], '').trim(); // Remove date line from notes
+                        
+                        // Check if urgency
+                        const targetDate = new Date(dateVal);
+                        const today = new Date();
+                        const diffTime = targetDate - today;
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                        
+                        let badgeColor = "bg-gray-100 text-gray-600 border-gray-200"; // Default
+                        if (diffDays <= 1) badgeColor = "bg-orange-100 text-orange-700 border-orange-200"; // Urgent
+
+                        dateBadgeHtml = `
+                            <div class="mt-2 flex">
+                                <span class="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold border ${badgeColor}">
+                                    <span class="material-symbols-outlined text-sm">calendar_month</span>
+                                    Scheduled: ${dateVal}
+                                </span>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                    <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-gray-100 dark:border-white/5">
+                        <div class="flex items-start gap-3">
+                            <div class="h-12 w-12 rounded-full ${color} flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined text-2xl">${icon}</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex justify-between items-start">
+                                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">${req.request_type}</h3>
+                                    <span class="text-xs font-bold text-gray-400">${dateStr}</span>
+                                </div>
+                                <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mt-1">${req.client_name}</p>
+                                <p class="text-sm text-gray-500 flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-sm">location_on</span>${req.address}</p>
+                                
+                                ${dateBadgeHtml}
+
+                                ${displayNotes ? `<p class="text-xs text-gray-400 mt-2 bg-gray-50 p-2 rounded-lg italic">"${displayNotes}"</p>` : ''}
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-gray-100 flex gap-2">
+                            <a href="tel:${req.phone}" class="flex-1 h-10 bg-green-100 text-green-700 rounded-lg flex items-center justify-center font-bold text-sm gap-2">
+                                <span class="material-symbols-outlined text-lg">call</span> Call
+                            </a>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+            } catch(e) {
+                console.error(e);
+                container.innerHTML = `<p class="text-center text-red-500 mt-10">Error loading requests.</p>`;
+            }
+        };
 
         window.handleAutoFill = async function(input, dbColumn) {
             const val = input.value.trim();
