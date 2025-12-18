@@ -178,7 +178,7 @@
             </div>
             
             <div class="mt-8 text-center">
-                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.33 • LOGOUT</button>
+                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.34 • LOGOUT</button>
             </div>
         </div>
     </section>
@@ -446,12 +446,16 @@
             document.getElementById('suggestions-address').classList.add('hidden');
         };
 
+        // --- SUBMIT LOG (UPDATED FOR CLIENT SYNC) ---
         window.submitLog = async function() {
             const btn = document.getElementById('submit-btn');
             const sharedKey = localStorage.getItem('swift_access_key');
             const binId = document.getElementById('log-bin-id').value.trim();
+            const clientName = document.getElementById('log-client-name').value.trim();
             const address = document.getElementById('log-address').value.trim();
-            
+            const phone = document.getElementById('log-phone').value.trim();
+            const activityType = document.getElementById('log-type').value;
+
             if(!binId) return window.showToast("Please select a Bin", true);
             if(!address) return window.showToast("Please enter an Address", true);
             if (!window.masterBins.includes(binId)) return window.showToast(`Error: Bin #${binId} does not exist in Master List`, true);
@@ -460,15 +464,53 @@
             document.getElementById('submit-btn-text').innerText = "Processing...";
 
             try {
-                const { error } = await supabase.from('activity_logs').insert([{
+                // 1. Log Activity to History
+                const { error: logError } = await supabase.from('activity_logs').insert([{
                     bin_id: binId,
-                    client_name: document.getElementById('log-client-name').value,
+                    client_name: clientName,
                     address: address,
-                    phone_number: document.getElementById('log-phone').value,
-                    activity_type: document.getElementById('log-type').value,
+                    phone_number: phone,
+                    activity_type: activityType,
                     access_key: sharedKey
                 }]);
-                if (error) throw error;
+                if (logError) throw logError;
+
+                // 2. Sync Client & Address to Database (Auto-populate)
+                if (clientName) {
+                    // Check if Client Exists
+                    let { data: client } = await supabase.from('clients').select('id').ilike('name', clientName).maybeSingle();
+                    let clientId;
+
+                    if (!client) {
+                        // Create New Client
+                        const { data: newClient, error: createError } = await supabase.from('clients')
+                            .insert([{ name: clientName, phone: phone, access_key: sharedKey }])
+                            .select().single();
+                        
+                        if (!createError) clientId = newClient.id;
+                    } else {
+                        clientId = client.id;
+                        // Optional: Update phone if different? (Skipping for now to avoid overwrite issues)
+                    }
+
+                    // Check/Add Address
+                    if (clientId && address) {
+                        const { data: existingAddr } = await supabase.from('client_addresses')
+                            .select('id')
+                            .eq('client_id', clientId)
+                            .ilike('address', address)
+                            .maybeSingle();
+                        
+                        if (!existingAddr) {
+                            await supabase.from('client_addresses').insert([{ 
+                                client_id: clientId, 
+                                address: address, 
+                                access_key: sharedKey 
+                            }]);
+                        }
+                    }
+                }
+
                 window.showToast("Activity Logged!");
                 setTimeout(() => { location.reload(); }, 1000);
             } catch (err) {
