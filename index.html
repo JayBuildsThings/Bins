@@ -163,7 +163,7 @@
             </div>
             
             <div class="mt-8 text-center">
-                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.22 • LOGOUT</button>
+                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.23 • LOGOUT</button>
             </div>
         </div>
     </section>
@@ -178,11 +178,11 @@
 
             <div class="flex-1 flex flex-col gap-5">
 
-                <!-- 1. Activity Type (MOVED TO TOP) -->
+                <!-- 1. Activity Type (AutoFill Trigger) -->
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Activity Type</label>
                     <div class="relative">
-                        <select id="log-type" class="w-full h-14 pl-4 pr-12 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm appearance-none cursor-pointer">
+                        <select id="log-type" onchange="autoFillBinDetails()" class="w-full h-14 pl-4 pr-12 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm appearance-none cursor-pointer">
                             <option value="Deliver">Deliver</option>
                             <option value="PickUp">PickUp</option>
                         </select>
@@ -190,13 +190,13 @@
                     </div>
                 </div>
                 
-                <!-- 2. Bin # -->
+                <!-- 2. Bin # (AutoFill Trigger) -->
                 <div class="flex flex-col gap-2 relative z-40">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Bin #</label>
                     <div class="relative">
                         <input type="text" id="log-bin-id" placeholder="Select Bin (e.g. 1)" autocomplete="off" 
                                class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm"
-                               oninput="handleBinSearch(this)" onfocus="handleBinSearch(this)">
+                               oninput="handleBinSearch(this)" onfocus="handleBinSearch(this)" onblur="autoFillBinDetails()">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">qr_code_2</span>
                         
                         <!-- Bin Dropdown -->
@@ -346,6 +346,38 @@
         window.selectBin = function(binId) {
             document.getElementById('log-bin-id').value = binId;
             document.getElementById('suggestions-bin').classList.add('hidden');
+            autoFillBinDetails(); // Trigger autofill on selection
+        };
+
+        // --- AUTOFILL ON PICKUP ---
+        window.autoFillBinDetails = async function() {
+            const type = document.getElementById('log-type').value;
+            const binId = document.getElementById('log-bin-id').value.trim();
+
+            // Only run if PickUp is selected and we have a bin ID
+            if (type !== 'PickUp' || !binId) return;
+
+            try {
+                // Find the last known location for this bin
+                const { data, error } = await supabase
+                    .from('activity_logs')
+                    .select('*')
+                    .eq('bin_id', binId)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (data) {
+                    // Populate fields
+                    if (data.client_name) document.getElementById('log-client-name').value = data.client_name;
+                    if (data.address) document.getElementById('log-address').value = data.address;
+                    if (data.phone_number) document.getElementById('log-phone').value = data.phone_number;
+                    
+                    window.showToast("Bin details autofilled");
+                }
+            } catch (e) {
+                console.error("Autofill error:", e);
+            }
         };
 
         // --- SUBMISSION ---
