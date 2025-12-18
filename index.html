@@ -27,9 +27,15 @@
                 requestAnimationFrame(() => {
                     target.classList.add('active');
                     window.scrollTo(0, 0);
-                    if(viewId === 'view-log-activity') updateTimeField();
-                    else if(viewId === 'view-bin-locations') loadBinLocations();
-                    else if(viewId === 'view-contacts') loadContacts();
+                    if(viewId === 'view-log-activity') {
+                        updateTimeField();
+                        // Reset dropdowns
+                        closeAllDropdowns({target: document.body});
+                    } else if(viewId === 'view-bin-locations') {
+                        loadBinLocations();
+                    } else if(viewId === 'view-contacts') {
+                        loadContacts();
+                    }
                 });
             }
         };
@@ -75,6 +81,9 @@
         .view { display: none; opacity: 0; transition: opacity 0.2s ease-in-out; }
         .view.active { opacity: 1; }
         #view-main-menu { display: block; opacity: 1; }
+        /* Smooth scrolling for dropdowns */
+        .custom-dropdown::-webkit-scrollbar { width: 4px; }
+        .custom-dropdown::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
 <body class="antialiased text-slate-900 dark:text-white" onclick="closeAllDropdowns(event)">
@@ -154,7 +163,7 @@
             </div>
             
             <div class="mt-8 text-center">
-                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.20 • LOGOUT</button>
+                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.21 • LOGOUT</button>
             </div>
         </div>
     </section>
@@ -168,14 +177,24 @@
             </div>
 
             <div class="flex-1 flex flex-col gap-5">
-                <div class="flex flex-col gap-2">
+                
+                <!-- 1. Bin # (UPDATED: Smart Dropdown) -->
+                <div class="flex flex-col gap-2 relative z-40">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Bin #</label>
                     <div class="relative">
-                        <input type="text" id="log-bin-id" placeholder="e.g. 914" class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm">
+                        <input type="text" id="log-bin-id" placeholder="Select Bin (e.g. 1)" autocomplete="off" 
+                               class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm"
+                               oninput="handleBinSearch(this)" onfocus="handleBinSearch(this)">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">qr_code_2</span>
+                        
+                        <!-- Bin Dropdown -->
+                        <div id="suggestions-bin" class="custom-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-surface-dark shadow-xl rounded-xl max-h-60 overflow-y-auto hidden border border-gray-100 dark:border-white/5">
+                            <!-- Populated via JS -->
+                        </div>
                     </div>
                 </div>
 
+                <!-- 2. Client Name -->
                 <div class="flex flex-col gap-2 relative z-30">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Client Name</label>
                     <div class="relative">
@@ -185,6 +204,7 @@
                     </div>
                 </div>
 
+                <!-- 3. Address -->
                 <div class="flex flex-col gap-2 relative z-20">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Address</label>
                     <div class="relative">
@@ -194,6 +214,7 @@
                     </div>
                 </div>
 
+                <!-- 4. Phone Number -->
                 <div class="flex flex-col gap-2 relative z-10">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Phone Number</label>
                     <div class="relative">
@@ -203,6 +224,7 @@
                     </div>
                 </div>
 
+                <!-- 5. Activity Type -->
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Activity Type</label>
                     <div class="relative">
@@ -214,6 +236,7 @@
                     </div>
                 </div>
 
+                <!-- 6. Date -->
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Date & Time</label>
                     <div class="flex items-center justify-start gap-3 h-14 w-full px-4 rounded-xl bg-gray-100 dark:bg-white/5 border border-transparent">
@@ -234,7 +257,7 @@
         </main>
     </section>
 
-    <!-- BIN LOCATIONS & CONTACTS (PLACEHOLDERS) -->
+    <!-- BIN LOCATIONS & CONTACTS -->
     <section id="view-bin-locations" class="view">
         <main class="flex flex-col min-h-screen p-4 max-w-md mx-auto bg-background-light dark:bg-background-dark">
             <div class="flex items-center gap-4 mb-6">
@@ -261,14 +284,27 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhldWhocGpkY3BoZGNycHdtaXJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NzIxMTksImV4cCI6MjA4MTU0ODExOX0.FGaDzZFo26DJvMOo5KshwtKLlCXSxVyz-bGBJkD26dI';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+        window.masterBins = []; // Cache for strict validation
+
         async function initSecurity() {
             const sharedKey = localStorage.getItem('swift_access_key');
             if (!sharedKey) {
                 document.getElementById('lock-screen').classList.remove('hidden');
                 return;
             }
-            // Unlock the session in Postgres
+            // Unlock the session
             await supabase.rpc('set_session_key', { key: sharedKey });
+            
+            // Prefetch master bins for validation/dropdowns
+            fetchMasterBins();
+        }
+
+        async function fetchMasterBins() {
+            const { data } = await supabase.from('master_bins').select('bin_id');
+            if(data) {
+                // Numeric Sort for Bins
+                window.masterBins = data.map(b => b.bin_id).sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
+            }
         }
 
         window.unlockApp = function() {
@@ -280,7 +316,76 @@
             if(confirm("Logout and lock vault?")) { localStorage.removeItem('swift_access_key'); location.reload(); }
         };
 
-        // --- DATA LOGIC ---
+        // --- BIN LOGIC (STRICT) ---
+        window.handleBinSearch = function(input) {
+            const val = input.value.trim().toLowerCase();
+            const listEl = document.getElementById('suggestions-bin');
+            
+            // Close other dropdowns
+            document.querySelectorAll('.custom-dropdown').forEach(el => { if(el.id !== 'suggestions-bin') el.classList.add('hidden'); });
+
+            // Filter from local masterBins cache
+            const filtered = window.masterBins.filter(b => b.toLowerCase().includes(val));
+            
+            if(filtered.length === 0) {
+                listEl.classList.add('hidden');
+                return;
+            }
+
+            // Build HTML
+            listEl.innerHTML = filtered.map(b => `
+                <div class="p-3.5 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer text-lg font-medium border-b border-gray-100 dark:border-white/5" 
+                     onclick="selectBin('${b}')">
+                    Bin #${b}
+                </div>
+            `).join('');
+            
+            listEl.classList.remove('hidden');
+        };
+
+        window.selectBin = function(binId) {
+            document.getElementById('log-bin-id').value = binId;
+            document.getElementById('suggestions-bin').classList.add('hidden');
+        };
+
+        // --- SUBMISSION ---
+        window.submitLog = async function() {
+            const btn = document.getElementById('submit-btn');
+            const sharedKey = localStorage.getItem('swift_access_key');
+            const binId = document.getElementById('log-bin-id').value.trim();
+            const address = document.getElementById('log-address').value.trim();
+            
+            if(!binId) return window.showToast("Please select a Bin", true);
+            if(!address) return window.showToast("Please enter an Address", true);
+
+            // STRICT VALIDATION
+            if (!window.masterBins.includes(binId)) {
+                return window.showToast(`Error: Bin #${binId} does not exist in Master List`, true);
+            }
+
+            btn.disabled = true;
+            document.getElementById('submit-btn-text').innerText = "Processing...";
+
+            try {
+                const { error } = await supabase.from('activity_logs').insert([{
+                    bin_id: binId,
+                    client_name: document.getElementById('log-client-name').value,
+                    address: address,
+                    phone_number: document.getElementById('log-phone').value,
+                    activity_type: document.getElementById('log-type').value,
+                    access_key: sharedKey
+                }]);
+                if (error) throw error;
+                window.showToast("Activity Logged!");
+                setTimeout(() => { location.reload(); }, 1000);
+            } catch (err) {
+                window.showToast(err.message, true);
+                btn.disabled = false;
+                document.getElementById('submit-btn-text').innerText = "SUBMIT LOG";
+            }
+        };
+
+        // --- OTHER LOGIC (Contacts/Locs/Autofill) ---
         window.loadBinLocations = async function() {
             const container = document.getElementById('bin-list-container');
             const { data, error } = await supabase.from('activity_logs').select('*').order('created_at', { ascending: false });
@@ -291,6 +396,11 @@
             container.innerHTML = "";
             uniqueBins.forEach(bin => {
                 const isPickup = bin.activity_type === 'PickUp';
+                const isDeliver = bin.activity_type === 'Deliver';
+                let displayText = bin.activity_type || 'Unknown';
+                if (isPickup) displayText = 'Not on site';
+                else if (isDeliver) displayText = 'Delivered';
+
                 container.innerHTML += `
                 <article class="bg-surface-light dark:bg-surface-dark p-3.5 rounded-lg shadow-sm border-l-[6px] ${isPickup ? 'border-status-not-assigned' : 'border-status-pickup'}">
                     <div class="flex items-start gap-3">
@@ -300,7 +410,7 @@
                         <div class="flex-1">
                             <div class="flex justify-between items-start mb-1">
                                 <h4 class="text-xl font-black">Bin #${bin.bin_id}</h4>
-                                <span class="${isPickup ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700'} text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide">${isPickup ? 'Not on site' : 'Delivered'}</span>
+                                <span class="${isPickup ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700'} text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide">${displayText}</span>
                             </div>
                             <div class="flex items-center gap-1.5 text-gray-500 text-sm cursor-pointer" onclick="openMaps('${bin.address}')">
                                 <span class="material-symbols-outlined text-[18px]">location_on</span>
@@ -338,49 +448,23 @@
                 </div>`).join('');
         }
 
-        window.submitLog = async function() {
-            const btn = document.getElementById('submit-btn');
-            const sharedKey = localStorage.getItem('swift_access_key');
-            const binId = document.getElementById('log-bin-id').value.trim();
-            const address = document.getElementById('log-address').value.trim();
-            
-            if(!binId || !address) return window.showToast("Fill in Bin # and Address", true);
-
-            btn.disabled = true;
-            document.getElementById('submit-btn-text').innerText = "Processing...";
-
-            try {
-                // Check master list
-                const { data: binData } = await supabase.from('master_bins').select('bin_id').eq('bin_id', binId).maybeSingle();
-                if (!binData && !confirm(`Bin #${binId} is not in your master list. Submit anyway?`)) throw new Error("Cancelled");
-
-                const { error } = await supabase.from('activity_logs').insert([{
-                    bin_id: binId,
-                    client_name: document.getElementById('log-client-name').value,
-                    address: address,
-                    phone_number: document.getElementById('log-phone').value,
-                    activity_type: document.getElementById('log-type').value,
-                    access_key: sharedKey
-                }]);
-                if (error) throw error;
-                window.showToast("Activity Logged!");
-                setTimeout(() => { location.reload(); }, 1000);
-            } catch (err) {
-                window.showToast(err.message, true);
-                btn.disabled = false;
-                document.getElementById('submit-btn-text').innerText = "SUBMIT LOG";
-            }
-        };
-
         // --- AUTOFILL ---
         window.handleAutoFill = async function(input, dbColumn) {
             const val = input.value.trim();
             const listId = `suggestions-${dbColumn.replace('_', '-')}`;
             const listEl = document.getElementById(listId);
-            if(val.length < 2) { listEl.classList.add('hidden'); return; }
+            // Hide if empty
+            if(val.length < 1) { listEl.classList.add('hidden'); return; }
+            
+            // Close others
+            document.querySelectorAll('.custom-dropdown').forEach(d => { if(d.id !== listId) d.classList.add('hidden'); });
+
             const { data } = await supabase.from('activity_logs').select('*').ilike(dbColumn, `%${val}%`).limit(5);
             if(!data || data.length === 0) return;
-            listEl.innerHTML = [...new Set(data.map(d => d[dbColumn]))].map(v => `<div class="p-3 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer text-sm" onclick="selectSug('${v}', '${dbColumn}')">${v}</div>`).join('');
+            
+            listEl.innerHTML = [...new Set(data.map(d => d[dbColumn]))].map(v => 
+                `<div class="p-3.5 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer text-sm border-b border-gray-100 dark:border-white/5" onclick="selectSug('${v}', '${dbColumn}')">${v}</div>`
+            ).join('');
             listEl.classList.remove('hidden');
         };
 
@@ -396,7 +480,11 @@
             }
         };
 
-        window.closeAllDropdowns = (e) => { if(e.target.tagName !== 'INPUT') document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.add('hidden')); };
+        window.closeAllDropdowns = (e) => { 
+            if(e.target.tagName !== 'INPUT' && !e.target.classList.contains('custom-dropdown')) {
+                document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.add('hidden')); 
+            }
+        };
 
         initSecurity();
     </script>
