@@ -6,26 +6,15 @@
     <meta name="theme-color" content="#ec1313">
     <title>SwiftBins</title>
     
-    <!-- PWA Link -->
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="icon.svg">
-
-    <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;800&family=Spline+Sans:wght@300;400;500;600;700&family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    
-    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-
-    <!-- Supabase Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
 
     <script>
-        // Global Error Handler
-        window.onerror = function(message, source, lineno, colno, error) {
-            console.error("Global Error:", message);
-        };
-
+        // --- NAVIGATION & UI ---
         window.navigateTo = function(viewId) {
             const views = document.querySelectorAll('.view');
             views.forEach(el => {
@@ -38,23 +27,15 @@
                 requestAnimationFrame(() => {
                     target.classList.add('active');
                     window.scrollTo(0, 0);
-                    
-                    // Trigger Logic based on View
-                    if(viewId === 'view-log-activity') {
-                        updateTimeField();
-                        document.querySelectorAll('.custom-dropdown').forEach(el => el.classList.add('hidden'));
-                    } else if (viewId === 'view-bin-locations') {
-                        loadBinLocations();
-                    } else if (viewId === 'view-contacts') {
-                        loadContacts();
-                    }
+                    if(viewId === 'view-log-activity') updateTimeField();
+                    else if(viewId === 'view-bin-locations') loadBinLocations();
+                    else if(viewId === 'view-contacts') loadContacts();
                 });
             }
         };
 
         window.openMaps = function(address) {
-            const query = encodeURIComponent(address);
-            window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank');
         };
 
         function updateTimeField() {
@@ -64,29 +45,15 @@
             if(el) el.innerText = dateStr;
         }
 
-        // --- TOAST NOTIFICATION SYSTEM ---
         window.showToast = function(message, isError = false) {
             const toast = document.getElementById('toast-notification');
             const toastMsg = document.getElementById('toast-message');
             const toastIcon = document.getElementById('toast-icon');
-
             toastMsg.innerText = message;
-            
-            if (isError) {
-                toast.className = "fixed top-6 left-1/2 -translate-x-1/2 bg-surface-dark text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 min-w-[300px] border-l-4 border-red-500 transition-all duration-300 transform scale-100 opacity-100";
-                toastIcon.innerText = "error";
-                toastIcon.className = "material-symbols-outlined text-red-500";
-            } else {
-                toast.className = "fixed top-6 left-1/2 -translate-x-1/2 bg-surface-dark text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 min-w-[300px] border-l-4 border-green-500 transition-all duration-300 transform scale-100 opacity-100";
-                toastIcon.innerText = "check_circle";
-                toastIcon.className = "material-symbols-outlined text-green-500";
-            }
-
+            toast.className = `fixed top-6 left-1/2 -translate-x-1/2 bg-surface-dark text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 min-w-[300px] border-l-4 ${isError ? 'border-red-500' : 'border-green-500'} transition-all duration-300 transform scale-100 opacity-100`;
+            toastIcon.innerText = isError ? "error" : "check_circle";
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
-                setTimeout(() => {
-                     toast.className = "fixed top-6 left-1/2 -translate-x-1/2 bg-surface-dark text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 min-w-[300px] border-l-4 border-transparent transition-all duration-300 transform scale-90 opacity-0 pointer-events-none";
-                }, 300);
             }, 3000);
         };
     </script>
@@ -96,42 +63,42 @@
             darkMode: "class",
             theme: {
                 extend: {
-                    colors: {
-                        "primary": "#ec1313", 
-                        "primary-yellow": "#f9f506", 
-                        "background-light": "#f8f6f6",
-                        "background-dark": "#221010",
-                        "surface-light": "#ffffff",
-                        "surface-dark": "#27272a",
-                        "status-pickup": "#10b981",
-                        "status-issue": "#ef4444",
-                        "status-not-assigned": "#9ca3af",
-                        "input-light": "#f0f0eb",
-                        "input-dark": "#363528",
-                    },
-                    fontFamily: {
-                        "display": ["Lexend", "sans-serif"],
-                        "body": ["Noto Sans", "sans-serif"]
-                    },
-                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
-                },
-            },
+                    colors: { "primary": "#ec1313", "primary-yellow": "#f9f506", "background-light": "#f8f6f6", "background-dark": "#221010", "surface-light": "#ffffff", "surface-dark": "#27272a", "status-pickup": "#10b981", "status-issue": "#ef4444", "status-not-assigned": "#9ca3af", "input-light": "#f0f0eb", "input-dark": "#363528" },
+                    fontFamily: { "display": ["Lexend", "sans-serif"], "body": ["Noto Sans", "sans-serif"] },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"}
+                }
+            }
         }
     </script>
     <style>
-        body { min-height: 100dvh; background-color: #f8f6f6; }
+        body { min-height: 100dvh; background-color: #f8f6f6; overflow-x: hidden; }
         .view { display: none; opacity: 0; transition: opacity 0.2s ease-in-out; }
         .view.active { opacity: 1; }
         #view-main-menu { display: block; opacity: 1; }
-        ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 </head>
 <body class="antialiased text-slate-900 dark:text-white" onclick="closeAllDropdowns(event)">
 
+    <!-- SHARED SECURITY LOCK SCREEN -->
+    <div id="lock-screen" class="fixed inset-0 z-[100] bg-dark flex items-center justify-center p-6 hidden">
+        <div class="max-w-sm w-full bg-white rounded-3xl p-8 shadow-2xl text-center">
+            <div class="w-20 h-20 bg-red-50 text-primary rounded-full flex items-center justify-center mx-auto mb-6">
+                <span class="material-symbols-outlined text-4xl">vpn_key</span>
+            </div>
+            <h2 class="text-2xl font-black mb-2">Private Vault</h2>
+            <p class="text-gray-500 text-sm mb-8">Enter your Team's Access Key to view bins and contacts.</p>
+            <input type="password" id="access-key-input" placeholder="Enter Access Key" 
+                   class="w-full h-14 bg-gray-100 border-none rounded-xl text-center font-bold tracking-widest mb-4 focus:ring-2 focus:ring-primary">
+            <button onclick="unlockApp()" class="w-full h-14 bg-primary text-white font-bold rounded-xl shadow-lg active:scale-95 transition-transform">
+                UNLOCK APP
+            </button>
+        </div>
+    </div>
+
     <!-- TOAST COMPONENT -->
-    <div id="toast-notification" class="fixed top-6 left-1/2 -translate-x-1/2 bg-surface-dark text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 min-w-[300px] border-l-4 border-transparent transition-all duration-300 transform scale-90 opacity-0 pointer-events-none">
+    <div id="toast-notification" class="fixed top-6 left-1/2 -translate-x-1/2 bg-surface-dark text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 min-w-[300px] transition-all duration-300 transform scale-90 opacity-0 pointer-events-none">
         <span id="toast-icon" class="material-symbols-outlined">info</span>
-        <span id="toast-message" class="font-bold text-sm">Notification</span>
+        <span id="toast-message" class="font-bold text-sm"></span>
     </div>
 
     <!-- ================= VIEW: MAIN MENU ================= -->
@@ -153,9 +120,7 @@
                             <span class="text-2xl font-extrabold text-slate-900 dark:text-white leading-none mb-1 group-active:text-primary">LOG ACTIVITY</span>
                             <span class="text-sm font-medium text-slate-500 dark:text-slate-400 leading-tight">Report collection or issues</span>
                         </div>
-                        <div class="ml-auto pr-2">
-                            <span class="material-symbols-outlined text-4xl text-slate-300 group-active:text-primary">arrow_forward_ios</span>
-                        </div>
+                        <div class="ml-auto pr-2"><span class="material-symbols-outlined text-4xl text-slate-300 group-active:text-primary">arrow_forward_ios</span></div>
                     </div>
                 </button>
 
@@ -169,9 +134,7 @@
                             <span class="text-2xl font-extrabold text-slate-900 dark:text-white leading-none mb-1 group-active:text-yellow-600">BIN LOCATIONS</span>
                             <span class="text-sm font-medium text-slate-500 dark:text-slate-400 leading-tight">Map view & status</span>
                         </div>
-                        <div class="ml-auto pr-2">
-                            <span class="material-symbols-outlined text-4xl text-slate-300 group-active:text-yellow-600">arrow_forward_ios</span>
-                        </div>
+                        <div class="ml-auto pr-2"><span class="material-symbols-outlined text-4xl text-slate-300 group-active:text-yellow-600">arrow_forward_ios</span></div>
                     </div>
                 </button>
 
@@ -185,15 +148,13 @@
                             <span class="text-2xl font-extrabold text-slate-900 dark:text-white leading-none mb-1 group-active:text-orange-600">CONTACT LIST</span>
                             <span class="text-sm font-medium text-slate-500 dark:text-slate-400 leading-tight">Names, address & phone numbers</span>
                         </div>
-                        <div class="ml-auto pr-2">
-                            <span class="material-symbols-outlined text-4xl text-slate-300 group-active:text-orange-600">arrow_forward_ios</span>
-                        </div>
+                        <div class="ml-auto pr-2"><span class="material-symbols-outlined text-4xl text-slate-300 group-active:text-orange-600">arrow_forward_ios</span></div>
                     </div>
                 </button>
             </div>
             
             <div class="mt-8 text-center">
-                <p class="text-xs font-bold text-slate-300 dark:text-slate-700">VERSION 1.0.18</p>
+                <button onclick="logout()" class="text-xs font-bold text-slate-300 dark:text-slate-700 hover:text-red-500">VERSION 1.0.20 • LOGOUT</button>
             </div>
         </div>
     </section>
@@ -202,72 +163,46 @@
     <section id="view-log-activity" class="view">
         <main class="flex flex-col min-h-screen p-4 max-w-md mx-auto relative bg-background-light dark:bg-background-dark">
             <div class="flex items-center gap-4 mb-6">
-                <button onclick="navigateTo('view-main-menu')" class="p-2 -ml-2 rounded-full hover:bg-black/5 active:bg-black/10 transition-colors cursor-pointer">
-                    <span class="material-symbols-outlined text-3xl text-gray-800 dark:text-white">arrow_back</span>
-                </button>
+                <button onclick="navigateTo('view-main-menu')" class="p-2 -ml-2 rounded-full hover:bg-black/5 active:bg-black/10 transition-colors cursor-pointer"><span class="material-symbols-outlined text-3xl text-gray-800 dark:text-white">arrow_back</span></button>
                 <h1 class="font-display font-bold text-2xl text-gray-900 dark:text-white">Log Activity</h1>
             </div>
 
             <div class="flex-1 flex flex-col gap-5">
-                
-                <!-- 1. Bin # -->
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Bin #</label>
                     <div class="relative">
-                        <input type="text" id="log-bin-id" placeholder="e.g. 914" 
-                               class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 shadow-sm">
+                        <input type="text" id="log-bin-id" placeholder="e.g. 914" class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">qr_code_2</span>
                     </div>
                 </div>
 
-                <!-- 2. Client Name -->
                 <div class="flex flex-col gap-2 relative z-30">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Client Name</label>
                     <div class="relative">
-                        <input type="text" id="log-client-name" placeholder="Name..." autocomplete="off"
-                               class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 shadow-sm"
-                               oninput="handleAutoFill(this, 'client_name')" onfocus="handleAutoFill(this, 'client_name')">
+                        <input type="text" id="log-client-name" placeholder="Name..." autocomplete="off" class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm" oninput="handleAutoFill(this, 'client_name')" onfocus="handleAutoFill(this, 'client_name')">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">person</span>
                         <div id="suggestions-client-name" class="custom-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-surface-dark shadow-xl rounded-xl max-h-60 overflow-y-auto hidden border border-gray-100 dark:border-white/5"></div>
                     </div>
                 </div>
 
-                <!-- 3. Address -->
                 <div class="flex flex-col gap-2 relative z-20">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Address</label>
                     <div class="relative">
-                        <input type="text" id="log-address" placeholder="Enter address..." autocomplete="off"
-                               class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 shadow-sm"
-                               oninput="handleAutoFill(this, 'address')" onfocus="handleAutoFill(this, 'address')">
+                        <input type="text" id="log-address" placeholder="Enter address..." autocomplete="off" class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm" oninput="handleAutoFill(this, 'address')" onfocus="handleAutoFill(this, 'address')">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">location_on</span>
                         <div id="suggestions-address" class="custom-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-surface-dark shadow-xl rounded-xl max-h-60 overflow-y-auto hidden border border-gray-100 dark:border-white/5"></div>
                     </div>
                 </div>
 
-                <!-- 4. Phone Number -->
                 <div class="flex flex-col gap-2 relative z-10">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Phone Number</label>
                     <div class="relative">
-                        <input type="tel" id="log-phone" placeholder="(555) 000-0000" autocomplete="off"
-                               class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 shadow-sm"
-                               oninput="handleAutoFill(this, 'phone_number')" onfocus="handleAutoFill(this, 'phone_number')">
+                        <input type="tel" id="log-phone" placeholder="(555) 000-0000" autocomplete="off" class="w-full h-14 pl-12 pr-4 rounded-xl bg-input-light dark:bg-input-dark border-none focus:ring-2 focus:ring-primary text-lg font-medium text-gray-900 dark:text-white shadow-sm" oninput="handleAutoFill(this, 'phone_number')" onfocus="handleAutoFill(this, 'phone_number')">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">phone</span>
                         <div id="suggestions-phone-number" class="custom-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-surface-dark shadow-xl rounded-xl max-h-60 overflow-y-auto hidden border border-gray-100 dark:border-white/5"></div>
                     </div>
                 </div>
 
-                <!-- 5. Date -->
-                <div class="flex flex-col gap-2">
-                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Date & Time</label>
-                    <div class="flex items-center justify-start gap-3 h-14 w-full px-4 rounded-xl bg-gray-100 dark:bg-white/5 border border-transparent">
-                        <span class="material-symbols-outlined text-2xl text-primary">schedule</span>
-                        <div class="flex flex-col items-start leading-none">
-                            <span id="log-display-date" class="text-base font-bold text-gray-900 dark:text-white">Loading...</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 6. Activity Type -->
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Activity Type</label>
                     <div class="relative">
@@ -275,28 +210,22 @@
                             <option value="Deliver">Deliver</option>
                             <option value="PickUp">PickUp</option>
                         </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                            <span class="material-symbols-outlined text-2xl">expand_more</span>
-                        </div>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500"><span class="material-symbols-outlined text-2xl">expand_more</span></div>
                     </div>
                 </div>
 
-                <!-- 7. PASSCODE (New Feature) -->
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-bold text-primary uppercase tracking-wider ml-1">Submission Passcode</label>
-                    <div class="relative">
-                        <input type="password" inputmode="numeric" id="log-passcode" placeholder="Enter 4-digit code" maxlength="4"
-                               class="w-full h-14 pl-12 pr-4 rounded-xl bg-white border-2 border-primary/20 focus:border-primary focus:ring-0 text-lg font-bold text-gray-900 tracking-widest shadow-sm">
-                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary text-2xl">lock</span>
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Date & Time</label>
+                    <div class="flex items-center justify-start gap-3 h-14 w-full px-4 rounded-xl bg-gray-100 dark:bg-white/5 border border-transparent">
+                        <span class="material-symbols-outlined text-2xl text-primary">schedule</span>
+                        <span id="log-display-date" class="text-base font-bold text-gray-900 dark:text-white">Loading...</span>
                     </div>
                 </div>
-
-                <div class="h-24"></div> 
             </div>
             
-            <div class="fixed bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-background-light via-background-light to-transparent dark:from-background-dark dark:via-background-dark pointer-events-none">
+            <div class="fixed bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-background-light via-background-light to-transparent dark:from-background-dark pointer-events-none">
                 <div class="max-w-md mx-auto pointer-events-auto">
-                    <button id="submit-btn" type="button" onclick="window.submitLog()" class="w-full h-14 bg-primary hover:bg-red-600 text-white font-display font-bold text-lg rounded-xl shadow-lg shadow-red-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:scale-100">
+                    <button id="submit-btn" type="button" onclick="window.submitLog()" class="w-full h-14 bg-primary text-white font-display font-bold text-lg rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
                         <span id="submit-btn-text">SUBMIT LOG</span>
                         <span id="submit-btn-icon" class="material-symbols-outlined">send</span>
                     </button>
@@ -305,323 +234,171 @@
         </main>
     </section>
 
-    <!-- VIEWS: Bin Locations & Contacts (No changes needed, keeping structure) -->
+    <!-- BIN LOCATIONS & CONTACTS (PLACEHOLDERS) -->
     <section id="view-bin-locations" class="view">
-        <main class="flex flex-col min-h-screen p-4 max-w-md mx-auto bg-background-light dark:bg-background-dark text-text-main">
-             <div class="flex items-center gap-4 mb-6">
-                <button onclick="navigateTo('view-main-menu')" class="p-2 -ml-2 rounded-full hover:bg-black/5 active:bg-black/10 transition-colors cursor-pointer">
-                    <span class="material-symbols-outlined text-3xl text-gray-800 dark:text-white">arrow_back</span>
-                </button>
+        <main class="flex flex-col min-h-screen p-4 max-w-md mx-auto bg-background-light dark:bg-background-dark">
+            <div class="flex items-center gap-4 mb-6">
+                <button onclick="navigateTo('view-main-menu')" class="p-2 -ml-2 rounded-full hover:bg-black/5 transition-colors cursor-pointer"><span class="material-symbols-outlined text-3xl text-gray-800 dark:text-white">arrow_back</span></button>
                 <h1 class="font-display font-bold text-2xl text-gray-900 dark:text-white">Bin Locations</h1>
             </div>
-            <div id="bin-list-container" class="flex flex-col gap-4">
-                <p class="text-center text-gray-500 animate-pulse mt-10">Loading locations...</p>
-            </div>
+            <div id="bin-list-container" class="flex flex-col gap-4"><p class="text-center text-gray-500 animate-pulse mt-10">Fetching your vault...</p></div>
         </main>
     </section>
 
     <section id="view-contacts" class="view">
         <main class="flex flex-col min-h-screen p-4 max-w-md mx-auto bg-background-light dark:bg-background-dark">
-             <div class="flex items-center gap-4 mb-4">
-                <button onclick="navigateTo('view-main-menu')" class="p-2 -ml-2 rounded-full hover:bg-black/5 active:bg-black/10 transition-colors cursor-pointer">
-                    <span class="material-symbols-outlined text-3xl text-gray-800 dark:text-white">arrow_back</span>
-                </button>
+            <div class="flex items-center gap-4 mb-4">
+                <button onclick="navigateTo('view-main-menu')" class="p-2 -ml-2 rounded-full hover:bg-black/5 transition-colors cursor-pointer"><span class="material-symbols-outlined text-3xl text-gray-800 dark:text-white">arrow_back</span></button>
                 <h1 class="font-display font-bold text-2xl text-gray-900 dark:text-white">Contact List</h1>
             </div>
-            <div class="mb-6">
-                <div class="relative">
-                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-                    <input type="text" id="contact-search" placeholder="Search contacts..." 
-                           class="w-full h-12 pl-12 pr-4 rounded-xl bg-white dark:bg-surface-dark border-none shadow-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary"
-                           oninput="filterContacts()">
-                </div>
-            </div>
-            <div id="contact-list-container" class="flex flex-col pb-20">
-                 <p class="text-center text-gray-500 animate-pulse mt-10">Loading contacts...</p>
-            </div>
+            <div class="mb-6 relative"><span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span><input type="text" id="contact-search" placeholder="Search..." class="w-full h-12 pl-12 pr-4 rounded-xl bg-white dark:bg-surface-dark border-none shadow-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary" oninput="filterContacts()"></div>
+            <div id="contact-list-container" class="flex flex-col pb-20"><p class="text-center text-gray-500 animate-pulse mt-10">Fetching your vault...</p></div>
         </main>
     </section>
 
     <script>
-        try {
-            const supabaseUrl = 'https://heuhhpjdcphdcrpwmirl.supabase.co';
-            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhldWhocGpkY3BoZGNycHdtaXJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NzIxMTksImV4cCI6MjA4MTU0ODExOX0.FGaDzZFo26DJvMOo5KshwtKLlCXSxVyz-bGBJkD26dI';
-            
-            let supabase;
-            if (window.supabase) {
-                supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-            } else {
-                console.error("Supabase library NOT loaded.");
-                window.showToast("Connection Error: Database library failed to load", true);
+        const supabaseUrl = 'https://heuhhpjdcphdcrpwmirl.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhldWhocGpkY3BoZGNycHdtaXJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NzIxMTksImV4cCI6MjA4MTU0ODExOX0.FGaDzZFo26DJvMOo5KshwtKLlCXSxVyz-bGBJkD26dI';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        async function initSecurity() {
+            const sharedKey = localStorage.getItem('swift_access_key');
+            if (!sharedKey) {
+                document.getElementById('lock-screen').classList.remove('hidden');
+                return;
             }
-
-            window.allContacts = [];
-
-            // --- LOADING FUNCTIONS ---
-            window.loadBinLocations = async function() {
-                if(!supabase) return;
-                const container = document.getElementById('bin-list-container');
-                try {
-                    const { data, error } = await supabase
-                        .from('activity_logs')
-                        .select('bin_id, address, activity_type, created_at')
-                        .order('created_at', { ascending: false });
-
-                    if(error) throw error;
-                    if(!data || data.length === 0) { container.innerHTML = `<p class="text-center text-gray-500 mt-10">No bin activity logged yet.</p>`; return; }
-
-                    const uniqueBins = new Map();
-                    data.forEach(log => {
-                        if(log.bin_id && !uniqueBins.has(log.bin_id)) uniqueBins.set(log.bin_id, log);
-                    });
-                    container.innerHTML = '';
-                    uniqueBins.forEach(bin => {
-                        const isPickup = bin.activity_type === 'PickUp';
-                        const statusColor = isPickup ? 'border-status-not-assigned' : 'border-status-pickup';
-                        const statusBg = isPickup ? 'bg-gray-100 text-gray-700' : 'bg-status-pickup/10 text-status-pickup';
-                        const html = `
-                        <article class="flex flex-col bg-surface-light dark:bg-surface-dark p-3.5 rounded-lg shadow-sm border-l-[6px] ${statusColor}">
-                            <div class="flex items-start gap-3">
-                                <div class="h-14 w-14 shrink-0 rounded-md bg-primary-yellow text-black flex flex-col items-center justify-center font-bold border border-yellow-500 shadow-sm">
-                                    <span class="text-[10px] leading-none uppercase tracking-wider opacity-80">Bin</span>
-                                    <span class="text-xl leading-none">${bin.bin_id}</span>
-                                </div>
-                                <div class="flex-1 flex flex-col gap-0.5">
-                                    <div class="flex justify-between items-start">
-                                        <h4 class="text-xl font-black text-text-main dark:text-white leading-tight">Bin #${bin.bin_id}</h4>
-                                        <span class="${statusBg} text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide border border-black/5">${bin.activity_type || 'Unknown'}</span>
-                                    </div>
-                                    <div class="flex items-center gap-1.5 text-text-main dark:text-gray-200 cursor-pointer" onclick="openMaps('${bin.address}')">
-                                        <span class="material-symbols-outlined text-gray-500 text-[18px]">location_on</span>
-                                        <span class="text-sm font-medium leading-tight text-gray-600 dark:text-gray-400 hover:text-primary underline decoration-dotted">${bin.address}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </article>`;
-                        container.innerHTML += html;
-                    });
-                } catch(e) { console.error("Bin Load Error:", e); container.innerHTML = `<p class="text-center text-red-500 mt-10">Error loading bins.</p>`; }
-            };
-
-            window.loadContacts = async function() {
-                if(!supabase) return;
-                const container = document.getElementById('contact-list-container');
-                const searchInput = document.getElementById('contact-search');
-                if(searchInput) searchInput.value = '';
-                container.innerHTML = `<p class="text-center text-gray-500 animate-pulse mt-10">Loading contacts...</p>`;
-                try {
-                    const { data, error } = await supabase
-                        .from('activity_logs')
-                        .select('client_name, address, phone_number, created_at')
-                        .order('created_at', { ascending: false });
-                    if(error) throw error;
-                    if(!data || data.length === 0) { container.innerHTML = `<p class="text-center text-gray-500 mt-10">No contacts logged yet.</p>`; window.allContacts = []; return; }
-                    
-                    const uniqueClients = new Map();
-                    data.forEach(log => {
-                        if(log.client_name && !uniqueClients.has(log.client_name)) uniqueClients.set(log.client_name, log);
-                    });
-                    window.allContacts = Array.from(uniqueClients.values()).sort((a, b) => a.client_name.localeCompare(b.client_name));
-                    renderContacts(window.allContacts);
-                } catch(e) { console.error("Contacts Load Error:", e); container.innerHTML = `<p class="text-center text-red-500 mt-10">Error loading contacts.</p>`; }
-            };
-
-            window.renderContacts = function(contacts) {
-                const container = document.getElementById('contact-list-container');
-                container.innerHTML = ''; 
-                if(!contacts || contacts.length === 0) { container.innerHTML = `<p class="text-center text-gray-500 mt-10">No contacts found.</p>`; return; }
-                contacts.forEach(client => {
-                    const initials = client.client_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
-                    const phone = client.phone_number || 'No Phone';
-                    const html = `
-                    <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm mb-4 border border-gray-100 dark:border-white/5">
-                        <div class="flex items-start gap-4">
-                            <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0">${initials}</div>
-                            <div class="flex-1 min-w-0">
-                                <h3 class="text-lg font-bold text-gray-900 dark:text-white leading-none mb-1">${client.client_name}</h3>
-                                <div class="flex flex-col gap-1">
-                                    <div class="flex items-center gap-2 text-gray-700 dark:text-gray-300 cursor-pointer" onclick="openMaps('${client.address}')">
-                                        <span class="material-symbols-outlined text-[18px] text-primary shrink-0">location_on</span>
-                                        <p class="text-base font-medium leading-normal truncate hover:text-primary underline decoration-dotted">${client.address}</p>
-                                    </div>
-                                    <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                                        <span class="material-symbols-outlined text-[18px] text-gray-400 shrink-0">phone</span>
-                                        <p class="text-sm font-medium leading-normal truncate">${phone}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-gray-100 dark:border-white/5">
-                            <a href="tel:${phone}" class="flex items-center justify-center gap-2 h-10 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold text-base active:bg-green-200">
-                                <span class="material-symbols-outlined text-xl">call</span><span>Call</span>
-                            </a>
-                            <button onclick="openMaps('${client.address}')" class="flex items-center justify-center gap-2 h-10 rounded-md bg-primary/10 text-primary font-bold text-base active:bg-primary/20">
-                                <span class="material-symbols-outlined text-xl">directions</span><span>Directions</span>
-                            </button>
-                        </div>
-                    </div>`;
-                    container.innerHTML += html;
-                });
-            };
-
-            window.filterContacts = function() {
-                const query = document.getElementById('contact-search').value.toLowerCase();
-                const filtered = window.allContacts.filter(c => c.client_name.toLowerCase().includes(query) || (c.address && c.address.toLowerCase().includes(query)) || (c.phone_number && c.phone_number.includes(query)));
-                renderContacts(filtered);
-            };
-
-            // --- SUBMISSION LOGIC ---
-            const addressInput = document.getElementById('log-address');
-            const binInput = document.getElementById('log-bin-id');
-            const clientInput = document.getElementById('log-client-name');
-            const phoneInput = document.getElementById('log-phone');
-            const passInput = document.getElementById('log-passcode');
-            let debounceTimer;
-
-            window.closeAllDropdowns = function(e) {
-                if (e.target.tagName === 'INPUT' || e.target.classList.contains('custom-dropdown-item')) return;
-                document.querySelectorAll('.custom-dropdown').forEach(el => el.classList.add('hidden'));
-            };
-            
-            window.handleAutoFill = async function(input, dbColumn) {
-                const val = input.value.trim();
-                const listId = `suggestions-${dbColumn.replace('_', '-')}`;
-                const listEl = document.getElementById(listId);
-                if(!listEl) return;
-                document.querySelectorAll('.custom-dropdown').forEach(el => { if(el.id !== listId) el.classList.add('hidden'); });
-                if (val.length < 1) { listEl.classList.add('hidden'); return; }
-                if (!supabase) return;
-
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(async () => {
-                    try {
-                        const { data } = await supabase.from('activity_logs').select('address, bin_id, client_name, phone_number').ilike(dbColumn, `%${val}%`).limit(5);
-                        listEl.innerHTML = '';
-                        if (data && data.length > 0) {
-                            const uniqueValues = [...new Set(data.map(item => item[dbColumn]))];
-                            if(uniqueValues.length > 0) {
-                                listEl.classList.remove('hidden');
-                                uniqueValues.forEach(v => {
-                                    if(v) {
-                                        const div = document.createElement('div');
-                                        div.className = "custom-dropdown-item p-3 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer border-b border-gray-100 dark:border-white/5 last:border-none transition-colors text-sm font-medium text-gray-700 dark:text-gray-200";
-                                        div.innerText = v;
-                                        div.onclick = (e) => {
-                                            e.stopPropagation();
-                                            input.value = v;
-                                            const fullRecord = data.find(d => d[dbColumn] === v);
-                                            if(fullRecord) {
-                                                if(fullRecord.bin_id && !binInput.value) binInput.value = fullRecord.bin_id;
-                                                if(fullRecord.client_name && !clientInput.value) clientInput.value = fullRecord.client_name;
-                                                if(fullRecord.phone_number && !phoneInput.value) phoneInput.value = fullRecord.phone_number;
-                                                if(fullRecord.address && !addressInput.value) addressInput.value = fullRecord.address;
-                                            }
-                                            listEl.classList.add('hidden');
-                                        };
-                                        listEl.appendChild(div);
-                                    }
-                                });
-                            } else listEl.classList.add('hidden');
-                        } else listEl.classList.add('hidden');
-                    } catch (e) { console.log("Auto-suggest error:", e); }
-                }, 300);
-            };
-
-            window.submitLog = async function() {
-                const btn = document.getElementById('submit-btn');
-                const btnText = document.getElementById('submit-btn-text');
-                const btnIcon = document.getElementById('submit-btn-icon');
-                const originalText = "SUBMIT LOG";
-                const originalIcon = "send";
-
-                // 1. Basic Validation
-                if (!addressInput.value) { window.showToast("Please enter an address", true); return; }
-                if (!binInput.value) { window.showToast("Please enter a Bin #", true); return; }
-                if (!passInput.value) { window.showToast("Enter passcode to submit", true); return; }
-
-                btn.disabled = true;
-                btnText.innerText = "Verifying...";
-                btnIcon.classList.add("animate-spin");
-
-                try {
-                    // 2. PASSCODE CHECK
-                    const { data: passData, error: passError } = await supabase
-                        .from('app_settings')
-                        .select('setting_value')
-                        .eq('setting_key', 'submission_passcode')
-                        .single();
-                    
-                    if(passError || !passData || passData.setting_value !== passInput.value) {
-                        throw new Error("Invalid Passcode");
-                    }
-
-                    // 3. MASTER BIN CHECK
-                    const { data: binData, error: binError } = await supabase
-                        .from('master_bins')
-                        .select('bin_id')
-                        .eq('bin_id', binInput.value)
-                        .single();
-
-                    if (!binData) {
-                        const proceed = confirm(`Warning: Bin #${binInput.value} is NOT in the Master List (1-30). Submit anyway?`);
-                        if (!proceed) {
-                            throw new Error("Submission cancelled");
-                        }
-                    }
-
-                    // 4. SUBMIT
-                    btnText.innerText = "Saving...";
-                    
-                    const { error: insertError } = await supabase
-                        .from('activity_logs')
-                        .insert([{ 
-                            address: addressInput.value, 
-                            bin_id: binInput.value,
-                            client_name: clientInput.value,
-                            phone_number: phoneInput.value,
-                            activity_type: document.getElementById('log-type').value,
-                            notes: "Logged via PWA"
-                        }]);
-
-                    if (insertError) throw insertError;
-
-                    window.showToast('Activity Logged Successfully!');
-                    setTimeout(() => {
-                        addressInput.value = '';
-                        binInput.value = '';
-                        clientInput.value = '';
-                        phoneInput.value = '';
-                        passInput.value = ''; // Clear passcode
-                        
-                        btn.disabled = false;
-                        btnText.innerText = originalText;
-                        btnIcon.classList.remove("animate-spin");
-                        window.navigateTo('view-main-menu');
-                    }, 1500);
-
-                } catch (err) {
-                    window.showToast(err.message, true);
-                    btn.disabled = false;
-                    btnText.innerText = originalText;
-                    btnIcon.classList.remove("animate-spin");
-                }
-            };
-        } catch (globalErr) { console.error(globalErr); }
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(reg => {
-                    reg.onupdatefound = () => {
-                        const installingWorker = reg.installing;
-                        installingWorker.onstatechange = () => {
-                            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                window.location.reload();
-                            }
-                        };
-                    };
-                }).catch(err => console.log('SW Fail', err));
-            });
+            // Unlock the session in Postgres
+            await supabase.rpc('set_session_key', { key: sharedKey });
         }
+
+        window.unlockApp = function() {
+            const key = document.getElementById('access-key-input').value.trim();
+            if (key) { localStorage.setItem('swift_access_key', key); location.reload(); }
+        };
+
+        window.logout = function() {
+            if(confirm("Logout and lock vault?")) { localStorage.removeItem('swift_access_key'); location.reload(); }
+        };
+
+        // --- DATA LOGIC ---
+        window.loadBinLocations = async function() {
+            const container = document.getElementById('bin-list-container');
+            const { data, error } = await supabase.from('activity_logs').select('*').order('created_at', { ascending: false });
+            if (error) { container.innerHTML = `<p class="text-center text-red-500 mt-10">Access Denied</p>`; return; }
+            
+            const uniqueBins = new Map();
+            data.forEach(log => { if(log.bin_id && !uniqueBins.has(log.bin_id)) uniqueBins.set(log.bin_id, log); });
+            container.innerHTML = "";
+            uniqueBins.forEach(bin => {
+                const isPickup = bin.activity_type === 'PickUp';
+                container.innerHTML += `
+                <article class="bg-surface-light dark:bg-surface-dark p-3.5 rounded-lg shadow-sm border-l-[6px] ${isPickup ? 'border-status-not-assigned' : 'border-status-pickup'}">
+                    <div class="flex items-start gap-3">
+                        <div class="h-14 w-14 shrink-0 rounded-md bg-primary-yellow text-black flex flex-col items-center justify-center font-bold border border-yellow-500">
+                            <span class="text-[10px] uppercase opacity-80">Bin</span><span class="text-xl">${bin.bin_id}</span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start mb-1">
+                                <h4 class="text-xl font-black">Bin #${bin.bin_id}</h4>
+                                <span class="${isPickup ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700'} text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide">${isPickup ? 'Not on site' : 'Delivered'}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-gray-500 text-sm cursor-pointer" onclick="openMaps('${bin.address}')">
+                                <span class="material-symbols-outlined text-[18px]">location_on</span>
+                                <span class="underline decoration-dotted">${bin.address}</span>
+                            </div>
+                        </div>
+                    </div>
+                </article>`;
+            });
+        };
+
+        window.loadContacts = async function() {
+            const container = document.getElementById('contact-list-container');
+            const { data, error } = await supabase.from('activity_logs').select('*').order('created_at', { ascending: false });
+            if (error) return;
+            const uniqueClients = new Map();
+            data.forEach(log => { if(log.client_name && !uniqueClients.has(log.client_name)) uniqueClients.set(log.client_name, log); });
+            window.allContacts = Array.from(uniqueClients.values()).sort((a,b) => a.client_name.localeCompare(b.client_name));
+            renderContacts(window.allContacts);
+        };
+
+        function renderContacts(contacts) {
+            const container = document.getElementById('contact-list-container');
+            container.innerHTML = contacts.map(c => `
+                <div class="bg-white dark:bg-surface-dark rounded-xl p-4 shadow-sm mb-4 border border-gray-100 dark:border-white/5">
+                    <div class="flex items-start gap-4">
+                        <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0">${c.client_name[0]}</div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold mb-1">${c.client_name}</h3>
+                            <p class="text-sm text-gray-500 mb-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">location_on</span>${c.address}</p>
+                            <p class="text-sm text-gray-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">phone</span>${c.phone_number}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-4"><a href="tel:${c.phone_number}" class="bg-green-100 text-green-700 h-10 rounded-md font-bold flex items-center justify-center gap-2 text-sm"><span class="material-symbols-outlined text-xl">call</span>Call</a><button onclick="openMaps('${c.address}')" class="bg-primary/10 text-primary h-10 rounded-md font-bold flex items-center justify-center gap-2 text-sm"><span class="material-symbols-outlined text-xl">directions</span>Directions</button></div>
+                </div>`).join('');
+        }
+
+        window.submitLog = async function() {
+            const btn = document.getElementById('submit-btn');
+            const sharedKey = localStorage.getItem('swift_access_key');
+            const binId = document.getElementById('log-bin-id').value.trim();
+            const address = document.getElementById('log-address').value.trim();
+            
+            if(!binId || !address) return window.showToast("Fill in Bin # and Address", true);
+
+            btn.disabled = true;
+            document.getElementById('submit-btn-text').innerText = "Processing...";
+
+            try {
+                // Check master list
+                const { data: binData } = await supabase.from('master_bins').select('bin_id').eq('bin_id', binId).maybeSingle();
+                if (!binData && !confirm(`Bin #${binId} is not in your master list. Submit anyway?`)) throw new Error("Cancelled");
+
+                const { error } = await supabase.from('activity_logs').insert([{
+                    bin_id: binId,
+                    client_name: document.getElementById('log-client-name').value,
+                    address: address,
+                    phone_number: document.getElementById('log-phone').value,
+                    activity_type: document.getElementById('log-type').value,
+                    access_key: sharedKey
+                }]);
+                if (error) throw error;
+                window.showToast("Activity Logged!");
+                setTimeout(() => { location.reload(); }, 1000);
+            } catch (err) {
+                window.showToast(err.message, true);
+                btn.disabled = false;
+                document.getElementById('submit-btn-text').innerText = "SUBMIT LOG";
+            }
+        };
+
+        // --- AUTOFILL ---
+        window.handleAutoFill = async function(input, dbColumn) {
+            const val = input.value.trim();
+            const listId = `suggestions-${dbColumn.replace('_', '-')}`;
+            const listEl = document.getElementById(listId);
+            if(val.length < 2) { listEl.classList.add('hidden'); return; }
+            const { data } = await supabase.from('activity_logs').select('*').ilike(dbColumn, `%${val}%`).limit(5);
+            if(!data || data.length === 0) return;
+            listEl.innerHTML = [...new Set(data.map(d => d[dbColumn]))].map(v => `<div class="p-3 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer text-sm" onclick="selectSug('${v}', '${dbColumn}')">${v}</div>`).join('');
+            listEl.classList.remove('hidden');
+        };
+
+        window.selectSug = async function(val, col) {
+            document.getElementById(`log-${col.replace('_', '-')}`).value = val;
+            document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.add('hidden'));
+            const { data } = await supabase.from('activity_logs').select('*').eq(col, val).limit(1);
+            if(data[0]) {
+                if(!document.getElementById('log-bin-id').value) document.getElementById('log-bin-id').value = data[0].bin_id;
+                if(!document.getElementById('log-client-name').value) document.getElementById('log-client-name').value = data[0].client_name;
+                if(!document.getElementById('log-address').value) document.getElementById('log-address').value = data[0].address;
+                if(!document.getElementById('log-phone').value) document.getElementById('log-phone').value = data[0].phone_number;
+            }
+        };
+
+        window.closeAllDropdowns = (e) => { if(e.target.tagName !== 'INPUT') document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.add('hidden')); };
+
+        initSecurity();
     </script>
 </body>
 </html>
