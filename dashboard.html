@@ -24,11 +24,6 @@
             }
         }
     </script>
-    <style>
-        .view { display: none; }
-        .view.active { display: block; animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
 </head>
 <body class="bg-gray-50 text-slate-900 font-display">
 
@@ -55,23 +50,20 @@
         <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-gray-200 pb-6">
             <div>
                 <h1 class="text-3xl font-extrabold text-dark tracking-tight">BIN <span class="text-primary">DASHBOARD</span></h1>
-                <p class="text-gray-500 text-sm mt-1">Real-time inventory & client management</p>
+                <p class="text-gray-500 text-sm mt-1">Real-time inventory management</p>
             </div>
             <div class="flex items-center gap-4">
-                <button onclick="switchView('overview')" id="nav-overview" class="nav-btn bg-dark text-white px-4 py-2 rounded-lg font-bold text-sm transition-all hover:opacity-80">Overview</button>
-                <button onclick="switchView('clients')" id="nav-clients" class="nav-btn bg-white text-gray-500 border border-gray-200 px-4 py-2 rounded-lg font-bold text-sm transition-all hover:text-primary hover:border-primary">Clients</button>
-                
+                <div class="px-4 py-2 bg-dark text-white rounded-lg font-bold text-sm">Overview</div>
                 <div class="w-px h-8 bg-gray-200 mx-2"></div>
-
-                <a href="index.html" class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                <a href="manage.html" class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
                     <span>Open App</span>
                     <span class="material-symbols-outlined text-lg">open_in_new</span>
                 </a>
             </div>
         </header>
 
-        <!-- VIEW: OVERVIEW (Existing Dashboard) -->
-        <div id="view-overview" class="view active">
+        <!-- VIEW: OVERVIEW -->
+        <div id="view-overview" class="block">
             <!-- Stats Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
@@ -140,59 +132,6 @@
             </div>
         </div>
 
-        <!-- VIEW: CLIENT MANAGEMENT -->
-        <div id="view-clients" class="view">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-dark">Client Management</h2>
-                <button onclick="openClientModal()" class="bg-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md hover:bg-red-600 transition-colors flex items-center gap-2">
-                    <span class="material-symbols-outlined">add</span> Add Client
-                </button>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="clients-grid">
-                <!-- Clients populated here -->
-                <p class="text-gray-400 col-span-full text-center py-10">Loading clients...</p>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- CLIENT MODAL -->
-    <div id="client-modal" class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl m-4">
-            <h3 id="modal-title" class="text-xl font-black mb-4">Add Client</h3>
-            <input type="hidden" id="edit-client-id">
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Name</label>
-                    <input type="text" id="client-name" class="w-full rounded-xl border-gray-200 focus:border-primary focus:ring-primary">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Phone</label>
-                    <input type="text" id="client-phone" class="w-full rounded-xl border-gray-200 focus:border-primary focus:ring-primary">
-                </div>
-                
-                <!-- Address Manager -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Linked Addresses</label>
-                    <div id="address-list" class="space-y-2 mb-2 max-h-40 overflow-y-auto">
-                        <!-- Addresses injected here -->
-                    </div>
-                    <div class="flex gap-2">
-                        <input type="text" id="new-address-input" placeholder="Add new address" class="flex-1 rounded-xl border-gray-200 text-sm focus:border-primary focus:ring-primary">
-                        <button onclick="addAddressField()" class="bg-gray-100 text-gray-600 p-2 rounded-xl hover:bg-gray-200">
-                            <span class="material-symbols-outlined">add</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-3 mt-8">
-                <button onclick="closeClientModal()" class="px-4 py-2 text-gray-500 font-bold hover:bg-gray-50 rounded-lg">Cancel</button>
-                <button onclick="saveClient()" class="px-6 py-2 bg-primary text-white font-bold rounded-lg shadow-lg hover:bg-red-600">Save Client</button>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -201,7 +140,6 @@
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         let allRows = [];
-        let currentAddresses = []; // Temporary store for modal
 
         // --- INIT ---
         async function init() {
@@ -214,7 +152,6 @@
             try {
                 await supabase.rpc('set_session_key', { key: sharedKey });
                 fetchDashboardData();
-                fetchClients();
             } catch (err) {
                 console.error(err);
             }
@@ -228,26 +165,7 @@
             }
         };
 
-        // --- NAVIGATION ---
-        window.switchView = function(viewName) {
-            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-            document.getElementById(`view-${viewName}`).classList.add('active');
-            
-            // Toggle Button Styles
-            const btnOverview = document.getElementById('nav-overview');
-            const btnClients = document.getElementById('nav-clients');
-            
-            if(viewName === 'overview') {
-                btnOverview.className = "nav-btn bg-dark text-white px-4 py-2 rounded-lg font-bold text-sm transition-all";
-                btnClients.className = "nav-btn bg-white text-gray-500 border border-gray-200 px-4 py-2 rounded-lg font-bold text-sm transition-all hover:text-primary hover:border-primary";
-            } else {
-                btnClients.className = "nav-btn bg-dark text-white px-4 py-2 rounded-lg font-bold text-sm transition-all";
-                btnOverview.className = "nav-btn bg-white text-gray-500 border border-gray-200 px-4 py-2 rounded-lg font-bold text-sm transition-all hover:text-primary hover:border-primary";
-                fetchClients();
-            }
-        };
-
-        // --- DASHBOARD LOGIC (EXISTING) ---
+        // --- DASHBOARD LOGIC ---
         async function fetchDashboardData() {
             const tbody = document.getElementById('dashboard-body');
             const { data: bins } = await supabase.from('master_bins').select('bin_id');
@@ -317,129 +235,6 @@
             const query = document.getElementById('table-search').value.toLowerCase();
             const filtered = allRows.filter(r => r.id.toLowerCase().includes(query) || r.client.toLowerCase().includes(query) || r.address.toLowerCase().includes(query));
             renderTable(filtered);
-        };
-
-        // --- CLIENT MANAGEMENT LOGIC ---
-        async function fetchClients() {
-            const grid = document.getElementById('clients-grid');
-            
-            // Fetch Clients AND their Addresses
-            const { data: clients, error } = await supabase.from('clients').select('*, client_addresses(*)').order('name');
-            
-            if (error || !clients) {
-                grid.innerHTML = `<p class="col-span-full text-center text-gray-400">No clients found or need database update.</p>`;
-                return;
-            }
-
-            grid.innerHTML = clients.map(client => `
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-primary transition-colors cursor-pointer group" onclick='editClient(${JSON.stringify(client).replace(/'/g, "&#39;")})'>
-                    <div class="flex justify-between items-start mb-3">
-                        <div class="h-10 w-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center font-bold text-lg group-hover:bg-red-50 group-hover:text-primary transition-colors">
-                            ${client.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span class="material-symbols-outlined text-gray-300 group-hover:text-primary">edit</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-dark">${client.name}</h3>
-                    <p class="text-sm text-gray-500 mb-4">${client.phone || 'No phone'}</p>
-                    
-                    <div class="space-y-1">
-                        ${client.client_addresses && client.client_addresses.length > 0 
-                            ? client.client_addresses.map(a => `<div class="text-xs bg-gray-50 px-2 py-1 rounded text-gray-600 truncate"><span class="material-symbols-outlined text-[10px] mr-1 align-middle">location_on</span>${a.address}</div>`).join('')
-                            : '<span class="text-xs text-gray-300 italic">No addresses linked</span>'
-                        }
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        window.openClientModal = function() {
-            document.getElementById('client-modal').classList.remove('hidden');
-            document.getElementById('modal-title').innerText = "Add Client";
-            document.getElementById('edit-client-id').value = "";
-            document.getElementById('client-name').value = "";
-            document.getElementById('client-phone').value = "";
-            currentAddresses = [];
-            renderAddressList();
-        };
-
-        window.editClient = function(client) {
-            document.getElementById('client-modal').classList.remove('hidden');
-            document.getElementById('modal-title').innerText = "Edit Client";
-            document.getElementById('edit-client-id').value = client.id;
-            document.getElementById('client-name').value = client.name;
-            document.getElementById('client-phone').value = client.phone || "";
-            
-            // Map addresses to temp array
-            currentAddresses = client.client_addresses.map(a => ({ id: a.id, address: a.address, isDeleted: false }));
-            renderAddressList();
-        };
-
-        window.closeClientModal = function() {
-            document.getElementById('client-modal').classList.add('hidden');
-        };
-
-        window.renderAddressList = function() {
-            const container = document.getElementById('address-list');
-            container.innerHTML = currentAddresses
-                .filter(a => !a.isDeleted)
-                .map((a, index) => `
-                <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg text-sm">
-                    <span class="material-symbols-outlined text-gray-400 text-sm">location_on</span>
-                    <span class="flex-1 truncate">${a.address}</span>
-                    <button onclick="removeAddress(${index})" class="text-red-400 hover:text-red-600"><span class="material-symbols-outlined text-sm">close</span></button>
-                </div>
-            `).join('');
-        };
-
-        window.addAddressField = function() {
-            const input = document.getElementById('new-address-input');
-            const val = input.value.trim();
-            if(val) {
-                currentAddresses.push({ id: null, address: val, isNew: true, isDeleted: false });
-                input.value = "";
-                renderAddressList();
-            }
-        };
-
-        window.removeAddress = function(index) {
-            // Strictly mark as deleted. SaveClient will handle the DB delete.
-            currentAddresses[index].isDeleted = true;
-            renderAddressList();
-        };
-
-        window.saveClient = async function() {
-            const btn = document.querySelector('#client-modal button.bg-primary');
-            btn.innerText = "Saving...";
-            
-            const id = document.getElementById('edit-client-id').value;
-            const name = document.getElementById('client-name').value;
-            const phone = document.getElementById('client-phone').value;
-            const key = localStorage.getItem('swift_access_key');
-
-            if (!name) { alert("Name required"); btn.innerText="Save Client"; return; }
-
-            // 1. Upsert Client
-            let clientId = id;
-            if (!clientId) {
-                const { data, error } = await supabase.from('clients').insert([{ name, phone, access_key: key }]).select().single();
-                if(error) { console.error(error); alert("Error saving client"); return; }
-                clientId = data.id;
-            } else {
-                await supabase.from('clients').update({ name, phone }).eq('id', clientId);
-            }
-
-            // 2. Sync Addresses
-            // A. Insert New
-            const newAddrs = currentAddresses.filter(a => a.isNew && !a.isDeleted).map(a => ({ client_id: clientId, address: a.address, access_key: key }));
-            if(newAddrs.length > 0) await supabase.from('client_addresses').insert(newAddrs);
-            
-            // B. Delete Removed (Crucial step for your request)
-            const idsToDelete = currentAddresses.filter(a => a.isDeleted && a.id).map(a => a.id);
-            if(idsToDelete.length > 0) await supabase.from('client_addresses').delete().in('id', idsToDelete);
-
-            closeClientModal();
-            fetchClients();
-            btn.innerText = "Save Client";
         };
 
         init();
